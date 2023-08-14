@@ -27,7 +27,7 @@ enum tokens {
 	token_ASSIGN_NATURAL,
 	token_ASSIGN_nonzeroNATURAL,
 	token_ASSIGN_INT,
-	token_ASSIGN_nonzeroINT, 
+	token_ASSIGN_nonzeroINT,
 	token_ASSIGN_FLOAT,
 	token_ASSIGN_nonzeroFLOAT,
 	token_ASSIGN_STRING,
@@ -68,7 +68,16 @@ enum tokens {
 int p{};
 char character{};
 
+bool checkIfPropperWord(const std::string& code, int start, const std::string& word) {
+	int i;
+	bool poate_fi = true;
 
+	for(i = 0; (i < (int) word.length()) && poate_fi && (start + i < (int) code.length());++i)
+		if(word[i] != code[start + i])
+			poate_fi=false;
+
+	return poate_fi && code[start + i] == ' ';
+}
 
 int getNextToken() {
 	character = sourceCode[p];
@@ -79,27 +88,27 @@ int getNextToken() {
 		Returneaza tipul de token;
 
 		Exemplu:
-		10 "FuckYou"Adevarat
+		10 "Hello_World!"Adevarat
 
 		Dupa primul apel getNextToken
-		69 "FuckYou"Adevarat
+		10 "Hello_World!"Adevarat
 		  ^
 		p = 2;
-		currentToken = 10;
+		currentToken = "10";
 		returneaza token_FLOAT;
 
 		Dupa al doilea apel
-		69 "FuckYou"Adevarat
-                    ^
-		p = 12;
-		currentToken = "FuckYou";
+		10 "Hello_World!"Adevarat
+						 ^
+		p = 17;
+		currentToken = "\"Hello_World!"\"
 		returneaza token_STRING
 
 		Dupa al treilea apel
-		69 "FuckYou"Adevarat
-		                    ^
-		p = 20 (Nu, nu da segmentation fault, se adauga '$' la sfarsit pentru fiecare linie)
-		currentToken = Adevarat
+		10 "Hello_World!"Adevarat
+								 ^
+		p = 25 (Nu, nu da segmentation fault, se adauga '$' la sfarsit pentru fiecare linie)
+		currentToken = "Adevarat"
 		returneaza token_BOOL
 	*/
 
@@ -111,7 +120,7 @@ int getNextToken() {
 		return getNextToken();
 	}
 
-	// Literals	
+	// Literals
 	if(isdigit(character)) {
 		do {
 			currentToken += character;
@@ -124,7 +133,7 @@ int getNextToken() {
 				character = sourceCode[++p];
 			}
 			while(isdigit(character) and p < sourceCode.length() - 1);
-		} 
+		}
 		return token_FLOAT;
 	}
 	if(character == '\"') {
@@ -155,11 +164,19 @@ int getNextToken() {
 		}
 	}
 
+	//Input, Output
+	if(checkIfPropperWord(sourceCode, p, "citeste")) {
+		currentToken = "citeste";
+		p += currentToken.length();
+		return token_INPUT;
+	}
+	if(checkIfPropperWord(sourceCode, p, "scrie")) {
+		currentToken = "scrie";
+		p += currentToken.length();
+		return token_OUTPUT;
+	}
 
-	
 
-
-	
 	// Daca a ajuns pana aici, inseamna ca nu s-a potrivit cu nimic,
 	// deci pune caracterul in currentToken, creste p-ul si returneaza UNKNOWN
 	currentToken += character;
