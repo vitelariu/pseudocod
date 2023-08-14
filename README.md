@@ -95,8 +95,8 @@ TODO
 | Nume | Pseudocod | C++ |
 | :--: | :-------: | :-: |
 | conditional | ```daca``` ```altfel daca``` ```altfel``` | ```if()``` ```else if()``` ```else``` |
-| bula | ```cat timp``` ```executa ... pana cand``` | ```while()``` ```do {...} while()```
-| bula cu numar cunoscut de pasi | ```pentru i <- 0, 10 executa``` | ```for(int i{}; i <= 10; i++)``` |
+| bucla | ```cat timp``` ```executa ... pana cand``` | ```while()``` ```do {...} while()```
+| bucla cu numar cunoscut de pasi | ```pentru i <- 0, 10 executa``` | ```for(int i{}; i <= 10; i++)``` |
 
 ### Conversii
 In pseudocod exista un singur tip de conversie: ```(TODO: mai multe tipuri de coversii in viitor poate?)```
