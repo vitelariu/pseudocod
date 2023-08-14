@@ -14,10 +14,24 @@ int main(int argc, char **argv) {
 
 		std::ifstream sourceFile(argv[1]);
 		if(sourceFile) {
-			std::ostringstream ss;
-			ss << sourceFile.rdbuf();
-			sourceCode = ss.str();
+
+			while(getline(sourceFile, sourceCode)) {
+				// TODO: SKIP la liniile complet goale
+
+
+				sourceCode += "$";
+ 
+				while(character != '$' and p < sourceCode.length() - 1) {
+					// So far, doar da print la acel tipul de token;
+					std::cout << getNextToken() << '\n';
+				}
+				p = 0;
+			}
 		}
+		else {
+			std::cout << "TODO: Eroare plm\n";
+		}
+
 	}
 	else {
 		/* Eroare, argumente neasteptate */
