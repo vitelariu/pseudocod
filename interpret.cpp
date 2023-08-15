@@ -5,7 +5,7 @@
 
 int main(int argc, char **argv) {
 	argc--;
-	
+
 	if(argc == 0) {
 		/* Interpreteaza direct in terminal */
 	}
@@ -20,8 +20,8 @@ int main(int argc, char **argv) {
 
 
 				sourceCode += "$";
- 
-				while(character != '$' and p < sourceCode.length() - 1) {
+
+				while(character != '$' and p < (int) sourceCode.length() - 1) {
 					// So far, doar da print la acel tipul de token;
 					std::cout << getNextToken() << '\n';
 				}
