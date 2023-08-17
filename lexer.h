@@ -76,7 +76,7 @@ int getNextToken() {
 
 	/*
 		Ia urmatorul token si pune-l in currentToken;
-		Returneaza tipul de token;
+		Returneaza tipul de token; Un token este un keyword / cuvant + (un spatiu sau end on line)
 
 		Exemplu:
 		10 "FuckYou"Adevarat
@@ -96,7 +96,7 @@ int getNextToken() {
 		returneaza token_STRING
 
 		Dupa al treilea apel
-		69 "FuckYou"Adevarat
+		69 "FuckYou" Adevarat
 		                    ^
 		p = 20 (Nu, nu da segmentation fault, se adauga '$' la sfarsit pentru fiecare linie)
 		currentToken = Adevarat
