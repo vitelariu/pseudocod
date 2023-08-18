@@ -61,6 +61,7 @@ enum tokens {
 
 	// Others
 	token_IDENTIFIER,
+	token_IDENTATION,
 	token_UNKNOWN,
 	token_FORCE_QUIT
 };
@@ -128,40 +129,45 @@ int getNextToken() {
 	/*
 		Ia urmatorul token si pune-l in currentToken;
 		Returneaza tipul de token; Un token este un keyword / cuvant + (un spatiu sau end on line)
-
-		Exemplu:
-		10 "Hello_World!"Adevarat
-
-		Dupa primul apel getNextToken
-		10 "Hello_World!"Adevarat
-		  ^
-		p = 2;
-		currentToken = "10";
-		returneaza token_FLOAT;
-
-		Dupa al doilea apel
-		10 "Hello_World!"Adevarat
-						 ^
-		p = 17;
-		currentToken = "\"Hello_World!"\"
-		returneaza token_STRING
-
-		Dupa al treilea apel
-		10 "Hello_World!"Adevarat
-								 ^
-		p = 25 (Nu, nu da segmentation fault, se adauga '$' la sfarsit pentru fiecare linie)
-		currentToken = "Adevarat"
-		returneaza token_BOOL
 	*/
 
 
 	// Spatiu
-	// Modifica mai tarziu pentru a identifica identarea (pentru tab-uri si spatii)
-	if(character == ' ') {
-		p++;
-		if(p < (int) sourceCode.length() - 1) {return getNextToken();}
+	
+	if(character == ' ' or character == '\t') {
+		if(p == 0) {
+			// Numara identarea (este la inceputul liniei)
+			// 1 / 2 / 3 / 4 spatii inseamna o identare
+			// 1 tab inseamna o identare
+			// Exemplu: un spatiu + un tab + un spatiu = 2 identarii
+			// (in total ai un tab si 2 spatii)
+			//
+			// Token-ul returnat va fi token_IDENTATION indiferent de numarul de identari
+			// Numarul de identari este pus in currentToken
+
+			int spaces_cnt{}, tabs_cnt{}, identation_cnt{};
+			do {
+				if(character == ' ') spaces_cnt++;
+				else if(character == '\t') tabs_cnt++;
+
+				character = sourceCode[++p];
+			}
+			while((character == ' ' or character == '\t') and p < (int) sourceCode.length());
+
+			identation_cnt += tabs_cnt; // tab-uri sunt echivalente cu identarea
+			identation_cnt += spaces_cnt / 4 + (spaces_cnt % 4 and 1); // formula pentru a
+																	   // transforma spatii in
+																	   // identare
+			currentToken = std::to_string(identation_cnt);
+			return token_IDENTATION;
+
+		}
 		else {
-			return token_FORCE_QUIT;
+			p++;
+			if(p < (int) sourceCode.length() - 1) {return getNextToken();}
+			else {
+				return token_FORCE_QUIT;
+			}
 		}
 	}
 
