@@ -21,7 +21,7 @@ enum tokens {
 	token_STRING,
 	token_BOOL,
 
-	// Data types when reading
+	// Data types when reading [DONE]
 	// spre exemplu citeste x (numar natural, nenul)
 	// citeste x,y,z (numere reale)
 	token_ASSIGN_NATURAL,
@@ -84,7 +84,7 @@ bool checkNextCharacterDifferentToken(const std::string &code, int i) {
 		return true;
 
 	// cuvantul e urmat de marcator sfarsit de linie (se poate scoate daca nu mai mergem pe ideea asta)
-	if(nextCharacter == '$' and i == code.length() - 1)
+	if(nextCharacter == '$' and i == (int) code.length() - 1)
 		return true;
 
 	// cuvantul e urmat de un caracter de tip operator
@@ -159,7 +159,7 @@ int getNextToken() {
 	// Modifica mai tarziu pentru a identifica identarea (pentru tab-uri si spatii)
 	if(character == ' ') {
 		p++;
-		if(p < sourceCode.length() - 1) {return getNextToken();}
+		if(p < (int) sourceCode.length() - 1) {return getNextToken();}
 		else {
 			return token_FORCE_QUIT;
 		}
@@ -230,7 +230,7 @@ int getNextToken() {
 	}
 
 	// Operands
-	if(character == '<' and p < sourceCode.length() - 1) {
+	if(character == '<' and p < (int) sourceCode.length() - 1) {
 		if(sourceCode[p+1] == '-') {
 			currentToken = "<-";
 			p += 2;
@@ -266,7 +266,7 @@ int getNextToken() {
 
 	// Logic
 	if(character == '>') {
-		if(sourceCode[p+1] == '=' and p < sourceCode.length() - 1) {
+		if(sourceCode[p+1] == '=' and p < (int) sourceCode.length() - 1) {
 			currentToken = ">=";
 			p += 2;
 			return token_GREATER_EQUAL;
@@ -279,7 +279,7 @@ int getNextToken() {
 		
 	}
 	if(character == '<') {
-		if(sourceCode[p+1] == '=' and p < sourceCode.length() - 1) {
+		if(sourceCode[p+1] == '=' and p < (int) sourceCode.length() - 1) {
 			currentToken = "<=";
 			p += 2;
 			return token_SMALLER_EQUAL;
@@ -312,6 +312,36 @@ int getNextToken() {
 		return token_OR;
 	}
 
+	// Data types
+	{
+		const unsigned int cnt_keywords = 16;
+		unsigned int i;
+
+		std::string keywords[cnt_keywords] = {"(numar natural)", "(numere naturale)", "(numar natural, nenul)", "(numere naturale, nenule)", "(numar intreg)", "(numere intregi)", "(numar intreg, nenul)", "(numere intregi, nenule)", "(numar real)", "(numere reale)", "(numar real, nenul)", "(numere reale, nenule)", "(string)", "(text)", "(bool)", "(logica)"};
+		tokens keyword_tok[cnt_keywords / 2] = {token_ASSIGN_NATURAL, token_ASSIGN_nonzeroNATURAL, token_ASSIGN_INT, token_ASSIGN_nonzeroINT, token_ASSIGN_FLOAT, token_ASSIGN_nonzeroFLOAT, token_ASSIGN_STRING, token_ASSIGN_BOOL};
+
+		for(i = 0; i < cnt_keywords; i++)
+		{
+			if(checkIfToken(sourceCode, p, keywords[i]))
+			{
+				// daca asta e token-ul, returneaza-l
+				currentToken = keywords[i];
+				p += keywords[i].length();
+				return keyword_tok[i / 2];
+			}
+			i++;
+			if(checkIfToken(sourceCode, p, keywords[i]))
+			{
+				// daca asta e token-ul, returneaza-l
+				currentToken = keywords[i];
+				p += keywords[i].length();
+				return keyword_tok[i / 2];
+			}
+
+		}
+
+	}
+
 	// Punctuation
 	switch(character) {
 		case ',':
@@ -336,7 +366,16 @@ int getNextToken() {
 			return token_RIGHT_SQUARE;
 	}
 
-
+	// Identifier
+	
+	if(isalpha(character)) {
+		do {
+			currentToken += character;
+			character = sourceCode[++p];
+		}
+		while((isalpha(character) or isdigit(character) or character == '_') and p < (int) sourceCode.length());
+		return token_IDENTIFIER;
+	}
 
 	// Daca a ajuns pana aici, inseamna ca nu s-a potrivit cu nimic,
 	// deci pune caracterul in currentToken, creste p-ul si returneaza UNKNOWN
