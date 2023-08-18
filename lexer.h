@@ -4,7 +4,7 @@ std::string sourceCode{};
 std::string currentToken{};
 
 enum tokens {
-	// Keywords
+	// Keywords [DONE]
 	token_INPUT,
 	token_OUTPUT,
 	token_IF,
@@ -14,7 +14,6 @@ enum tokens {
 	token_WHILE,
 	token_EXECUTE,
 	token_UNTIL,
-	token_DO_WHILE,
 	token_FOR,
 
 	// Literals [DONE]
@@ -70,7 +69,8 @@ int p{};
 char character{};
 
 /// Functie auxiliara, verifica daca urmatorul caracter poate fi considerat drept facand parte dintr-un alt cuvant
-bool checkNextCharacterDifferentToken(const char nextCharacter) {
+bool checkNextCharacterDifferentToken(const std::string &code, int i) {
+	const char nextCharacter = code[i];
 	// cuvantul nu se termina acolo
 	if(nextCharacter >= 'a' && nextCharacter <= 'z')
 		return false;
@@ -84,7 +84,7 @@ bool checkNextCharacterDifferentToken(const char nextCharacter) {
 		return true;
 
 	// cuvantul e urmat de marcator sfarsit de linie (se poate scoate daca nu mai mergem pe ideea asta)
-	if(nextCharacter == '$')
+	if(nextCharacter == '$' and i == code.length() - 1)
 		return true;
 
 	// cuvantul e urmat de un caracter de tip operator
@@ -107,7 +107,7 @@ bool checkNextCharacterDifferentToken(const char nextCharacter) {
 }
 
 /// Functie auxiliara, verifica daca code[start .. start + word.length()] == word si daca cuvantul se incheie acolo
-bool checkIfToken(const std::string& code, int start, const std::string& word) {
+bool checkIfToken(const std::string &code, int start, const std::string& word) {
 	int i;
 	bool poate_fi = true;
 
@@ -117,7 +117,7 @@ bool checkIfToken(const std::string& code, int start, const std::string& word) {
 			poate_fi=false;
 
 	// daca toate caracterele sunt egale, verificam daca cuvantul s-a terminat
-	return poate_fi && checkNextCharacterDifferentToken(code[start + i]);
+	return poate_fi && checkNextCharacterDifferentToken(code, start + i);
 }
 
 int getNextToken() {
@@ -213,9 +213,7 @@ int getNextToken() {
 	{
 		const unsigned int cnt_keywords = 10;
 		unsigned int i;
-		// Probabil va trebui sa modificam check-ul pentru "altfel daca", "cat timp" si "pana cand"
-		// pentru a permite scrierea mai multor caractere cum ar fi: "cat     timp     Adevarat"
-		// sau inlocuirea cu un caracter '\t' (dar nu sunt sigur daca asta ar trebui sa fie cod valid)
+
 		std::string keywords[cnt_keywords] = {"citeste", "scrie", "daca", "atunci", "altfel", "altfel daca", "cat timp", "executa", "pentru", "pana cand"};
 		tokens keyword_tok[cnt_keywords] = {token_INPUT, token_OUTPUT, token_IF, token_THEN, token_ELSE, token_ELSE_IF, token_WHILE, token_EXECUTE, token_FOR, token_UNTIL};
 
@@ -303,12 +301,12 @@ int getNextToken() {
 		return token_NOT;
 	}
 	
-	if(checkIfPropperWord(sourceCode, p, "si")) {
+	if(checkIfToken(sourceCode, p, "si")) {
 		currentToken = "si";
 		p += currentToken.length();
 		return token_AND;
 	}
-	if(checkIfPropperWord(sourceCode, p, "sau")) {
+	if(checkIfToken(sourceCode, p, "sau")) {
 		currentToken = "sau";
 		p += currentToken.length();
 		return token_OR;
