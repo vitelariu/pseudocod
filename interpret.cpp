@@ -1,7 +1,7 @@
 #include <iostream>
 #include <fstream>
-#include "lexer.h"
-
+#include <utility>
+#include "parser.h"
 
 int main(int argc, char **argv) {
 	argc--;
@@ -15,21 +15,35 @@ int main(int argc, char **argv) {
 		std::ifstream sourceFile(argv[1]);
 		if(sourceFile) {
 
-			while(getline(sourceFile, sourceCode)) {
-				// TODO: SKIP la liniile complet goale
 
+			while(getline(sourceFile, sourceCode)) {
+				std::vector<std::pair<std::string, int>> tokens{}; // every token and its type on this line
 
 				sourceCode += "$";
-
 				while(character != '$' and p < (int) sourceCode.length() - 1) {
-					// So far, doar da print la acel tipul de token;
-					std::cout << getNextToken() << '\n';
+					int x = getNextToken();
+					std::pair<std::string, int> token(currentToken, x);
+					
+
+					// token_FORCE_QUIT este un token care este returnat atunci cand
+					// pe linie, ultimul caracter este ' ', '\t'
+					// Acesta trebuie ignorat
+					if(x != token_FORCE_QUIT) {
+						tokens.push_back(token);
+					}
 				}
 				p = 0;
+						
+				
+
+
+				parseEntry(tokens);
+
 			}
+
 		}
 		else {
-			std::cout << "TODO: Eroare plm\n";
+			std::cout << "TODO: Eroare\n";
 		}
 
 	}
