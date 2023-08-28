@@ -48,9 +48,10 @@ enum tokens {
 	token_SMALLER,
 	token_SMALLER_EQUAL,
 	token_EQUAL,
-	token_NOT,
+	token_NOT_EQUAL,
 	token_AND,
 	token_OR,
+	token_NOT,
 
 	// Punctuation [DONE]
 	token_COMMA,
@@ -94,7 +95,7 @@ bool checkNextCharacterDifferentToken(const std::string &code, int i) {
 		return true;
 
 	// cuvantul e urmat de un caracter de tip paranteza
-	std::string paranteze = "()[]"; //probabil ca {} trebuie adaugate dar nu sunt sigur
+	std::string paranteze = "()[]";
 	if(paranteze.find(nextCharacter) != std::string::npos)
 		return true;
 
@@ -300,6 +301,11 @@ int getNextToken() {
 		currentToken = character;
 		p++;
 		return token_EQUAL;
+	}
+	if(checkIfToken(sourceCode, p, "!=")) {
+		currentToken = "!=";
+		p += currentToken.length();
+		return token_NOT_EQUAL;
 	}
 	if(character == '!') {
 		currentToken = character;

@@ -10,6 +10,10 @@
 class parse {
 	private:
 		int index{}; // used for vector
+					 
+		// must be 0 after execution
+		int parenth_cnt{}, square_cnt{};
+												
 		std::pair<std::string, int> token;
 		std::vector<std::pair<std::string, int>> tokens;
 
@@ -22,7 +26,7 @@ class parse {
 		}
 
 		std::pair<std::string, int> getNextTokenFromVector() {
-			std::pair<std::string, int> token = tokens[index];
+			token = tokens[index];
 			index++;
 			return token;
 		}
@@ -40,13 +44,35 @@ class parse {
 				return std::stod(token.first);
 			}
 			else if(token.second == token_LEFT_PARENTH) {
+
+				if(tokens[index].second == token_RIGHT_PARENTH) {
+					token = getNextTokenFromVector();
+					token.second = token_FORCE_QUIT;
+					return 0;
+				}
+
+				parenth_cnt++;
+
 				double nested = expr();
 				match(token_RIGHT_PARENTH);
+				token.second = token_FORCE_QUIT;
+
 				return nested;
 			}
 			else if(token.second == token_LEFT_SQUARE) {
+
+				if(tokens[index].second == token_RIGHT_SQUARE) {
+					token = getNextTokenFromVector();
+					token.second = token_FORCE_QUIT;
+					return 0;
+				}
+
+
+				square_cnt++;
+				
 				int nested = (int) expr();
 				match(token_RIGHT_SQUARE);
+				token.second = token_FORCE_QUIT;
 				return (double) nested;
 			}
 			else {
@@ -65,6 +91,19 @@ class parse {
 				}
 
 				token = getNextTokenFromVector();
+
+				bool op = false;
+				for(int i = token_PLUS; i <= token_OR; i++) {
+					if(token.second == i) {
+						op = true;
+						break;
+					}
+				}
+				if(token.second == token_RIGHT_PARENTH or token.second == token_RIGHT_SQUARE) op = true;
+				if(!op) {
+					std::cout << "eroare de sintaxa\n";
+					break;
+				} 
 
 				if(token.second != token_POWER) break;
 
@@ -146,22 +185,9 @@ class parse {
 
 		}
 
-		double expr() {
-			/*
-			Arithmetic expression parser / interpreter.
-
-			calc> 7 + 3 * (10 / (12 / (3 + 1) - 1))
-			22
-
-			expr   : term ((PLUS | MINUS) term)*
-			term   : factor ((MUL | DIV | MOD) factor)*
-			factor : exp ((POW) exp)*
-			exp : INTEGER | LPAREN expr RPAREN | LSQUARE expr SQUARE
-			*/
+		double addend() {
 
 
-
-			token = getNextTokenFromVector();
 			double result = term();
 
 			while(true) {
@@ -197,22 +223,201 @@ class parse {
 				}
 			}
 		
-			if(token.second != token_FLOAT and token.second != token_RIGHT_PARENTH and token.second != token_RIGHT_SQUARE) {
+
+			return result;
+
+		}
+
+		double comp() {
+			double result = addend();
+
+			while(true) {
+				if(index >= (int) tokens.size()) {
+					break;
+				}
+
+
+				if(token.second != token_GREATER and token.second != token_GREATER_EQUAL and token.second != token_SMALLER and token.second != token_SMALLER_EQUAL and token.second != token_EQUAL and token.second != token_NOT_EQUAL) break;
+
+				if(token.second == token_GREATER) {
+					token = getNextTokenFromVector();
+
+					if(token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE) {
+						result = result > addend();
+					}
+					else {
+						std::cout << "error4";
+					}
+				}
+				else if(token.second == token_GREATER_EQUAL) {
+					token = getNextTokenFromVector();
+
+					if(token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE) {
+						result = result >= addend();
+					}
+					else {
+						std::cout << "error4";
+					}
+				}
+				else if(token.second == token_SMALLER) {
+					token = getNextTokenFromVector();
+
+					if(token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE) {
+						result = result < addend();
+					}
+					else {
+						std::cout << "error4";
+					}
+				}
+				else if(token.second == token_SMALLER_EQUAL) {
+					token = getNextTokenFromVector();
+
+					if(token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE) {
+						result = result <= addend();
+					}
+					else {
+						std::cout << "error4";
+					}
+				}
+				else if(token.second == token_EQUAL) {
+					token = getNextTokenFromVector();
+
+					if(token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE) {
+						result = result == addend();
+					}
+					else {
+						std::cout << "error4";
+					}
+				}
+				else if(token.second == token_NOT_EQUAL) {
+					token = getNextTokenFromVector();
+
+					if(token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE) {
+						result = result != addend();
+					}
+					else {
+						std::cout << "error4";
+					}
+				}
+				else {
+					std::cout << "error6";
+				}
+			}
+
+			return result;
+	
+
+		}
+
+		double logic() {
+			double result = comp();
+
+			while(true) {
+				if(index >= (int) tokens.size()) {
+					break;
+				}
+
+
+				if(token.second != token_AND) break;
+
+				if(token.second == token_AND) {
+					token = getNextTokenFromVector();
+
+					if(token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE) {
+						result = result && comp();
+					}
+					else {
+						std::cout << "error4";
+					}
+				}
+				else {
+					std::cout << "error6";
+				}
+			}
+
+			return result;
+	
+		}
+
+		double expr() {
+			/*
+			Arithmetic expression parser / interpreter.
+
+			
+			expr : logic ((OR) logic)*
+			logic : comp ((AND) comp)*
+			comp :  addend ((GREATER | GREATER_EQUAL | SMALLER | SMALLER_EQUAL | EQUAL | NOT_EQUAL) addend)*
+			addend : term ((PLUS | MINUS) term)*
+			term   : factor ((MUL | DIV | MOD) factor)*
+			factor : exp ((POW) exp)*
+			exp : INTEGER | LPAREN expr RPAREN | LSQUARE expr SQUARE | NOT_EQUAL exp 
+			*/
+
+
+			token = getNextTokenFromVector();
+			double result = logic();
+
+			while(true) {
+				if(index >= (int) tokens.size()) {
+					break;
+				}
+
+				if(token.second != token_OR) break;
+
+
+				if(token.second == token_OR) {
+					token = getNextTokenFromVector();
+	 
+					if(token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE) {
+						result = result || logic();
+					}
+					else {
+						std::cout << "error9";
+					}
+				}
+				else {
+					std::cout << "error10";
+				}
+
+
+			}
+
+			if(token.second == token_RIGHT_PARENTH) {
+				parenth_cnt--;
+			}
+			else if(token.second == token_RIGHT_SQUARE) {
+				square_cnt--;
+			}
+
+
+
+			if(token.second != token_FLOAT and token.second != token_RIGHT_PARENTH and token.second != token_RIGHT_SQUARE and token.second != token_FORCE_QUIT) {
 				std::cout << "error7";
-				std::cout << token.first << '\n';
 			}
 
 			return result;
 
 		}
+
+		double start() {
+			double result = expr();
+
+			if(parenth_cnt != 0 or square_cnt != 0) {
+				std::cout << "inconsistent brackets\n";
+				return square_cnt;
+			}
+
+			return result;
+		}		
 };
 
 int parseEntry(std::vector<std::pair<std::string, int>> tokens) {
 	parse Parser(tokens);
 
+
 	
 	// Deocamdata doar printeaza rezultatul
-	std::cout << Parser.expr();
+	std::cout << Parser.start() << '\n';
 
 	return 0;
 }
