@@ -2,7 +2,138 @@
 #include <vector>
 #include <cmath>
 #include <string>
+#include <type_traits>
 #include "lexer.h"
+
+// Astea sunt folosite pentru a determina tipul de node din ast-ul de expresii
+enum types {
+	numberType,
+
+	orType,
+
+	andType,
+
+	greaterType,
+	greaterEqualType,
+	smallerType,
+	smallerEqualType,
+	equalType,
+	notEqualType,
+
+	plusType,
+	minusType,
+
+	multiplyType,
+	divisionType,
+	moduloType,
+
+	powerType,
+};
+
+
+class exprAst {
+    public:
+		// Dupa numarul de la op ne dam seama ce fel de node este
+		// ex: 0 -> numar (doar cand op-ul este 0, int-ul number este valid)
+		// 1 -> plus (si se va folosi cele 2 pointere de mai jos pentru urmatoarele nodes)
+		// etc etc
+        int op = -1;
+        double number{};
+        
+        exprAst *left = nullptr;
+        exprAst *right = nullptr;
+        
+		// Functii pentru a construii ast-ul
+		// 5 tipuri de functii:
+		//
+		// 1.
+		//
+		//    -----
+		//    |num|
+		void make(int x) {
+			this->op = 0;
+			this->number = x;
+		}
+		// 2.
+		//     ____
+		//     |op|
+		//     /  \
+		//    /    \
+		//  |num| |num| 
+		exprAst *make(int Type, int x, int y) {
+			exprAst *newNode = new exprAst;
+			newNode->op = Type;
+
+			newNode->left = new exprAst;
+			newNode->right = new exprAst;
+
+			newNode->left->op = 0;
+			newNode->left->number = x;
+			newNode->right->op = 0;
+			newNode->right->number = y;
+
+
+			return newNode;
+
+		}
+		// 3.
+		//	
+		//	  ____
+		//    |op|
+		//    /  \
+		//   /    \
+		// |op|  |num|
+		exprAst *make(int Type, exprAst *left, int y) {
+
+			exprAst *newNode = new exprAst;
+			newNode->op = Type;
+
+
+			newNode->left = left;
+			
+
+			newNode->right = new exprAst;
+
+			newNode->right->op = 0;
+			newNode->right->number = y;
+
+			return newNode;
+		}
+		// 4.
+		//
+		//    ____
+		//    |op|
+		//    /  \
+		//   /    \
+		// |num|  |op|
+		void make(int Type, int x, exprAst* right) {
+			this->op = Type;
+
+			this->left = new exprAst;
+			this->right = right;
+
+			this->left->op = 0;
+			this->left->number = x;
+		}
+		// 5.
+		//
+		//    ____
+		//    |op|
+		//    /  \
+		//   /    \
+		// |op|  |op|
+		void make(int Type, exprAst* left, exprAst* right) {
+			this->op = Type;
+
+			this->left = left;
+			this->right = right;
+		}
+};
+
+
+exprAst* expr = new exprAst;
+
+
 
 // erorile sunt puse provizoriu
 
@@ -36,6 +167,7 @@ class parse {
 
 		parse(std::vector<std::pair<std::string, int>> tokens) {
 			this->tokens = tokens;
+			
 
 		}
 
