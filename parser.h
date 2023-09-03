@@ -19,6 +19,7 @@ enum types {
 	smallerEqualType,
 	equalType,
 	notEqualType,
+	notType,
 
 	plusType,
 	minusType,
@@ -39,12 +40,25 @@ class exprAst {
 		// etc etc
         int op = -1;
         double number{};
-        
+
+		// flags
+		// - flags[0]
+		// daca este true, calculul de sub acest node va fi transformat in int
+		// useful pentru expresii de genul [1 / 2]
+		//
+		// - flags[1]
+		// daca este true, numarul, sau expresia in cazul -(1 + 2) etc, va fi negativa
+		// 
+		// - flags[2]
+		// daca este true, numarul sau expr va fi trecuta prin not gate
+		bool flags[3] = {};
+
+
         exprAst *left = nullptr;
         exprAst *right = nullptr;
         
 		// Functii pentru a construii ast-ul
-		// 5 tipuri de functii:
+		// 2 tipuri de functii:
 		//
 		// 1.
 		//
@@ -60,72 +74,6 @@ class exprAst {
 			return newNode;
 		}
 		// 2.
-		//     ____
-		//     |op|
-		//     /  \
-		//    /    \
-		//  |num| |num| 
-		exprAst *make(int Type, int x, int y) {
-			exprAst *newNode = new exprAst;
-			newNode->op = Type;
-
-			newNode->left = new exprAst;
-			newNode->right = new exprAst;
-
-			newNode->left->op = 0;
-			newNode->left->number = x;
-			newNode->right->op = 0;
-			newNode->right->number = y;
-
-
-			return newNode;
-
-		}
-		// 3.
-		//	
-		//	  ____
-		//    |op|
-		//    /  \
-		//   /    \
-		// |op|  |num|
-		exprAst *make(int Type, exprAst *left, int y) {
-
-			exprAst *newNode = new exprAst;
-			newNode->op = Type;
-
-
-			newNode->left = left;
-			
-
-			newNode->right = new exprAst;
-
-			newNode->right->op = numberType;
-			newNode->right->number = y;
-
-			return newNode;
-		}
-		// 4.
-		//
-		//    ____
-		//    |op|
-		//    /  \
-		//   /    \
-		// |num|  |op|
-		exprAst *make(int Type, int x, exprAst* right) {
-			exprAst *newNode = new exprAst;
-
-			newNode->op = Type;
-
-			newNode->right = right;
-			newNode->left = new exprAst;
-
-			newNode->left->op = numberType;
-			newNode->left->number = x;
-
-			return newNode;
-
-		}
-		// 5.
 		//
 		//    ____
 		//    |op|
@@ -165,7 +113,7 @@ class parse {
 	
 		void match(int type) {
 			if(token.second != type) {
-				std::cout << "eroare";
+				std::cout << "eroare match";
 
 			} 
 		}
@@ -206,7 +154,13 @@ class parse {
 				}
 
 				parenth_cnt++;
+				if(index == (int) tokens.size()) {
+					exprAst *nodeNumber = new exprAst;
+					nodeNumber = nodeNumber->make(0);
 
+					return nodeNumber;
+
+				}
 				exprAst *nested = expr();
 				match(token_RIGHT_PARENTH);
 				token.second = token_FORCE_QUIT;
@@ -227,15 +181,68 @@ class parse {
 
 
 				square_cnt++;
+
+				if(index == (int) tokens.size()) {
+					exprAst *nodeNumber = new exprAst;
+					nodeNumber = nodeNumber->make(0);
+
+					return nodeNumber;
+
+				}
 				
 				exprAst *nested = expr();
+				nested->flags[0] = true;
 				match(token_RIGHT_SQUARE);
 				token.second = token_FORCE_QUIT;
 				return nested;
 			}
-			else {
-				std::cout << "eroare";
+			else if(token.second == token_MINUS) {
+				if(index < (int) tokens.size()) {token = getNextTokenFromVector();}
+				else {
+					std::cout << "eroare bitch\n";
+					exprAst *nodeNumber = new exprAst;
+					nodeNumber = nodeNumber->make(0);
+					return nodeNumber;
+
+				}
+				exprAst *nested = exp();
+				nested->flags[1] = !(nested->flags[1]);
+				token.second = token_FORCE_QUIT;
+				return nested;
+
 			}
+			else if(token.second == token_PLUS) {
+				if(index < (int) tokens.size()) {token = getNextTokenFromVector();}
+				else {
+					std::cout << "eroare bitch2 de data asta\n";
+					exprAst *nodeNumber = new exprAst;
+					nodeNumber = nodeNumber->make(0);
+					return nodeNumber;
+
+				}
+				exprAst *nested = exp();
+				token.second = token_FORCE_QUIT;
+				return nested;
+
+			}
+			else if(token.second == token_NOT) {
+				if(index < (int) tokens.size()) {token = getNextTokenFromVector();}
+				else {
+					std::cout << "eroare bitch3 de data asta\n";
+					exprAst *nodeNumber = new exprAst;
+					nodeNumber = nodeNumber->make(0);
+					return nodeNumber;
+
+				}
+				exprAst *nested = exp();
+				nested->flags[2] = !(nested->flags[2]);
+				token.second = token_FORCE_QUIT;
+				return nested;
+
+			}
+			
+			std::cout << "eroare 99";
+			
 			
 			exprAst *nodeNumber = new exprAst;
 			nodeNumber = nodeNumber->make(0);
@@ -275,7 +282,7 @@ class parse {
 				if(token.second == token_POWER) {
 					token = getNextTokenFromVector();
 
-					if(token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE) {
+					if(token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) {
 						exprTree = exprTree->make(powerType, exprTree, exp());
 
 						//result = pow(result, exp());
@@ -311,7 +318,7 @@ class parse {
 				if(token.second == token_ASTERISK) {
 					token = getNextTokenFromVector();
  
-					if(token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE) {
+					if(token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) {
 						exprTree = exprTree->make(multiplyType, exprTree, factor());
 						//result = result * factor();
 					}
@@ -322,7 +329,7 @@ class parse {
 				else if(token.second == token_DIVISION) {
 					token = getNextTokenFromVector();
  
-					if(token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE) {
+					if(token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) {
 						exprTree = exprTree->make(divisionType, exprTree, factor());
 						//result = result / factor();
 					}
@@ -333,7 +340,7 @@ class parse {
 				else if(token.second == token_MODULO) {
 					token = getNextTokenFromVector();
  
-					if(token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE) {
+					if(token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) {
 						exprTree = exprTree->make(moduloType, exprTree, factor());
 					}
 					else {
@@ -368,7 +375,7 @@ class parse {
 				if(token.second == token_PLUS) {
 					token = getNextTokenFromVector();
 
-					if(token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE) {
+					if(token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) {
 						exprTree = exprTree->make(plusType, exprTree, term());
 
 						//result = result + term();
@@ -380,13 +387,13 @@ class parse {
 				else if(token.second == token_MINUS) {
 					token = getNextTokenFromVector();
  
-					if(token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE) {
+					if(token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) {
 						exprTree = exprTree->make(minusType, exprTree, term());
 
 						//result = result - term();
 					}
 					else {
-						std::cout << "error5";
+						std::cout << "error aici";
 					}
 				}
 				else {
@@ -417,7 +424,7 @@ class parse {
 				if(token.second == token_GREATER) {
 					token = getNextTokenFromVector();
 
-					if(token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE) {
+					if(token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) {
 						exprTree = exprTree->make(greaterType, exprTree, addend());
 						//result = result > addend();
 					}
@@ -428,7 +435,7 @@ class parse {
 				else if(token.second == token_GREATER_EQUAL) {
 					token = getNextTokenFromVector();
 
-					if(token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE) {
+					if(token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) {
 						exprTree = exprTree->make(greaterEqualType, exprTree, addend());
 						//result = result >= addend();
 					}
@@ -439,7 +446,7 @@ class parse {
 				else if(token.second == token_SMALLER) {
 					token = getNextTokenFromVector();
 
-					if(token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE) {
+					if(token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) {
 						exprTree = exprTree->make(smallerType, exprTree, addend());
 					//	result = result < addend();
 					}
@@ -450,7 +457,7 @@ class parse {
 				else if(token.second == token_SMALLER_EQUAL) {
 					token = getNextTokenFromVector();
 
-					if(token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE) {
+					if(token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) {
 						exprTree = exprTree->make(smallerEqualType, exprTree, addend());
 
 						//result = result <= addend();
@@ -462,7 +469,7 @@ class parse {
 				else if(token.second == token_EQUAL) {
 					token = getNextTokenFromVector();
 
-					if(token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE) {
+					if(token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) {
 						exprTree = exprTree->make(equalType, exprTree, addend());
 
 						//result = result == addend();
@@ -474,7 +481,7 @@ class parse {
 				else if(token.second == token_NOT_EQUAL) {
 					token = getNextTokenFromVector();
 
-					if(token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE) {
+					if(token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) {
 						exprTree = exprTree->make(notEqualType, exprTree, addend());
 
 						//result = result != addend();
@@ -512,7 +519,7 @@ class parse {
 				if(token.second == token_AND) {
 					token = getNextTokenFromVector();
 
-					if(token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE) {
+					if(token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_PLUS or token.second == token_NOT) {
 						exprTree = exprTree->make(andType, exprTree, comp());
 						//result = result && comp();
 					}
@@ -560,7 +567,7 @@ class parse {
 				if(token.second == token_OR) {
 					token = getNextTokenFromVector();
 	 
-					if(token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE) {
+					if(token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_PLUS or token.second == token_NOT) {
 						exprTree = exprTree->make(orType, exprTree, logic());
 						//result = result || logic();
 					}
@@ -618,15 +625,13 @@ void printAst(exprAst *exprTree) {
 	}
 }
 
-int parseEntry(std::vector<std::pair<std::string, int>> tokens) {
+exprAst *parseEntry(std::vector<std::pair<std::string, int>> tokens) {
 	parse Parser(tokens);
 
 
 	
 	exprAst *exprTree = Parser.start();
+	
 
-	// Tree inspection
-	printAst(exprTree);
-
-	return 0;
+	return exprTree;
 }

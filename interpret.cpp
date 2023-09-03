@@ -1,7 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <utility>
-#include "parser.h"
+#include "interpreter.h"
 
 int main(int argc, char **argv) {
 	argc--;
@@ -36,7 +36,11 @@ int main(int argc, char **argv) {
 			p = 0;
 			character = ' '; // asta putea fi setat la orice in afara de $
 
-			parseEntry(tokens);
+			exprAst *Tree = parseEntry(tokens);
+			std::cout << interpret(Tree) << '\n';	
+
+			delete Tree;
+			Tree = nullptr;
 
 			std::cout << ">> ";
 
