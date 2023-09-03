@@ -11,6 +11,11 @@ int main(int argc, char **argv) {
 		
 		std::cout << ">> ";
 		while(getline(std::cin, sourceCode)) {
+			if(sourceCode.length() == 0) {
+				std::cout << ">> ";
+				continue;
+			}
+
 			std::vector<std::pair<std::string, int>> tokens{}; // every token and its type on this line
 
 			sourceCode += "$";
@@ -34,7 +39,6 @@ int main(int argc, char **argv) {
 			parseEntry(tokens);
 
 			std::cout << ">> ";
-			
 
 		}
 	}
@@ -46,6 +50,8 @@ int main(int argc, char **argv) {
 
 
 			while(getline(sourceFile, sourceCode)) {
+				if(sourceCode.length() == 0) continue;
+
 				std::vector<std::pair<std::string, int>> tokens{}; // every token and its type on this line
 																   
 
