@@ -8,6 +8,7 @@
 // Astea sunt folosite pentru a determina tipul de node din ast-ul de expresii
 enum types {
 	numberType,
+	stringType,
 
 	orType,
 
@@ -36,10 +37,12 @@ class exprAst {
     public:
 		// Dupa numarul de la op ne dam seama ce fel de node este
 		// ex: 0 -> numar (doar cand op-ul este 0, int-ul number este valid)
-		// 1 -> plus (si se va folosi cele 2 pointere de mai jos pentru urmatoarele nodes)
+		// 1 -> string (doar cand op-ul este 1, string-ul str este valid)
+		// 2 -> plus (se va folosi pointerele de mai jos (exprAst *left/right) pentru a reprezenta nod-urile)
 		// etc etc
         int op = -1;
         double number{};
+		std::string str{};
 
 		// flags
 		// - flags[0]
@@ -58,7 +61,7 @@ class exprAst {
         exprAst *right = nullptr;
         
 		// Functii pentru a construii ast-ul
-		// 2 tipuri de functii:
+		// 3 tipuri de functii:
 		//
 		// 1.
 		//
@@ -68,18 +71,41 @@ class exprAst {
 			exprAst *newNode = new exprAst;
 			newNode->op = numberType;
 
-
 			newNode->number = x;
 
 			return newNode;
 		}
 		// 2.
 		//
-		//    ____
-		//    |op|
-		//    /  \
-		//   /    \
-		// |op|  |op|
+		//    -----
+		//    |str|
+		exprAst *make(std::string x) {
+			exprAst *newNode = new exprAst;
+			newNode->op = stringType;
+
+			newNode->str = x;
+
+			return newNode;
+		}
+
+		// 3.
+		//
+		//     ____
+		//     |op|
+		//     /  \
+		//    /    \
+		// |node|  |node|
+		//
+		// "node"-urile pot fi numere, string-uri, sau alte op
+		// ex:
+		//
+		//         |+|
+		//         / \
+		//        /   \
+		//      |69|  |*|
+		//            / \
+		//           /   \
+		//          |2|  |3|
 		exprAst *make(int Type, exprAst* left, exprAst* right) {
 			exprAst *newNode = new exprAst;
 
@@ -140,6 +166,13 @@ class parse {
 				nodeNumber = nodeNumber->make(number);
 
 				return nodeNumber;
+			}
+			else if(token.second == token_STRING) {
+				std::string str = token.first;
+				exprAst *nodeString = new exprAst;
+				nodeString = nodeString->make(str);
+
+				return nodeString;
 			}
 			else if(token.second == token_LEFT_PARENTH) {
 
@@ -318,7 +351,7 @@ class parse {
 				if(token.second == token_ASTERISK) {
 					token = getNextTokenFromVector();
  
-					if(token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) {
+					if(token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT or token.second == token_STRING) {
 						exprTree = exprTree->make(multiplyType, exprTree, factor());
 						//result = result * factor();
 					}
@@ -591,7 +624,7 @@ class parse {
 
 
 
-			if(token.second != token_FLOAT and token.second != token_RIGHT_PARENTH and token.second != token_RIGHT_SQUARE and token.second != token_FORCE_QUIT) {
+			if(token.second != token_FLOAT and token.second != token_RIGHT_PARENTH and token.second != token_STRING and token.second != token_RIGHT_SQUARE and token.second != token_FORCE_QUIT) {
 				std::cout << "error7";
 			}
 

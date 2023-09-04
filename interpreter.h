@@ -1,4 +1,5 @@
 #include <iostream>
+#include <cmath>
 #include "parser.h"
 
 
@@ -24,71 +25,140 @@ void clean(exprAst *Tree, double result) {
 	Tree->right = nullptr;
 }
 
-double interpret(exprAst *Tree) {
-	if(Tree->op == numberType) {
-		checkFlags(Tree, Tree->number);
-		return Tree->number;
+bool checkIfChildIsString(exprAst *node) {
+	return node->op == stringType;
+}
+
+std::string multiply_str(std::string x, double number) {
+	if(number != (int) number) {
+		std::cout << "eroare cum sa inmultesti cu double";
+		return "";
+	}
+	
+	std::string final_str = "\"";
+	std::string pure_str{};
+
+	for(int i{1}; i < (int) x.length() - 1; i++) {
+		pure_str += x[i];
 	}
 
+	for(int i{}; i < (int) number; i++) {
+		final_str += pure_str;
+	}
+	final_str += "\"";
+
+	return final_str;
+}
+
+std::string interpret(exprAst *Tree) {
+	if(Tree->op == numberType) {
+		checkFlags(Tree, Tree->number);
+		if(Tree->number == (int) Tree->number) return std::to_string((int) Tree->number);
+		return std::to_string(Tree->number);
+	}
+	else if(Tree->op == stringType) {
+		return Tree->str;
+	} 
+
 	double result{};
+	bool string = false;
 
 	switch(Tree->op) {
 		case orType:
-			result = interpret(Tree->left) || interpret(Tree->right);
+
+			result = std::stoi(interpret(Tree->left)) || std::stoi(interpret(Tree->right));
 			clean(Tree, result);
 			break;
 		case andType:
-			result = interpret(Tree->left) && interpret(Tree->right);
+
+			result = std::stoi(interpret(Tree->left)) && std::stoi(interpret(Tree->right));
 			clean(Tree, result);
 			break;
 		case greaterType:
-			result = interpret(Tree->left) > interpret(Tree->right);
+
+			result = std::stod(interpret(Tree->left)) > std::stod(interpret(Tree->right));
 			clean(Tree, result);
 			break;
 		case greaterEqualType:
-			result = interpret(Tree->left) >= interpret(Tree->right);
+			result = std::stod(interpret(Tree->left)) >= std::stod(interpret(Tree->right));
 			clean(Tree, result);
 			break;
 		case smallerType:
-			result = interpret(Tree->left) < interpret(Tree->right);
+
+
+			result = std::stod(interpret(Tree->left)) < std::stod(interpret(Tree->right));
 			clean(Tree, result);
 			break;
 		case smallerEqualType:
-			result = interpret(Tree->left) <= interpret(Tree->right);
+
+
+			result = std::stod(interpret(Tree->left)) <= std::stod(interpret(Tree->right));
 			clean(Tree, result);
 			break;
 		case equalType:
-			result = interpret(Tree->left) == interpret(Tree->right);
+
+
+			result = std::stod(interpret(Tree->left)) == std::stod(interpret(Tree->right));
 			clean(Tree, result);
 			break;
 		case notEqualType:
-			result = interpret(Tree->left) != interpret(Tree->right);
+
+
+			result = std::stod(interpret(Tree->left)) != std::stod(interpret(Tree->right));
 			clean(Tree, result);
 			break;
 		case plusType:
-			result = interpret(Tree->left) + interpret(Tree->right);
+
+
+			result = std::stod(interpret(Tree->left)) + std::stod(interpret(Tree->right));
 			clean(Tree, result);
 			break;
 		case minusType:
-			result = interpret(Tree->left) - interpret(Tree->right);
+
+
+			result = std::stod(interpret(Tree->left)) - std::stod(interpret(Tree->right));
 			clean(Tree, result);
 			break;
 		case multiplyType:
-			result = interpret(Tree->left) * interpret(Tree->right);
+			if(checkIfChildIsString(Tree->left) and !checkIfChildIsString(Tree->right)) {
+				string = true;
+				Tree->op =	stringType;
+				Tree->str = multiply_str(Tree->left->str, std::stod(interpret(Tree->right)));
+				delete Tree->left;
+				delete Tree->right;
+				Tree->left = nullptr;
+				Tree->right = nullptr;
+
+				break;
+			}
+			else if(checkIfChildIsString(Tree->right) and !checkIfChildIsString(Tree->left)) {
+				string = true;
+				Tree->op =	stringType;
+				Tree->str = multiply_str(Tree->right->str, std::stod(interpret(Tree->left)));
+				delete Tree->left;
+				delete Tree->right;
+				Tree->left = nullptr;
+				Tree->right = nullptr;
+				break;
+			}
+			result = std::stod(interpret(Tree->left)) * std::stod(interpret(Tree->right));
 			clean(Tree, result);
 			break;
 		case divisionType:
-			result = interpret(Tree->left) / interpret(Tree->right);
+
+
+			result = std::stod(interpret(Tree->left)) / std::stod(interpret(Tree->right));
 			clean(Tree, result);
 			break;
 		case powerType:
-			result = pow(interpret(Tree->left),interpret(Tree->right));
+			result = pow(std::stod(interpret(Tree->left)),std::stod(interpret(Tree->right)));
 			clean(Tree, result);
 			break;
 
 
 	}
 
-
-	return Tree->number;
+	if(string) return Tree->str;
+	if(Tree->number == (int) Tree->number) return std::to_string((int) Tree->number);
+	return std::to_string(Tree->number);
 }
