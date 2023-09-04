@@ -56,7 +56,7 @@ Pentru a interpreta comenzi direct din terminal:
 | Asignare | ```<-``` | ```=``` |
 | Egal | ```=``` | ```==``` |
 | Mai mare | ```>``` | ```>``` |
-| Mai mic | ```<`` | ```<``` |
+| Mai mic | ```<``` | ```<``` |
 | Mai mare sau egal | ```>=``` | ```>=``` |
 | Mai mic sau egal | ```<=``` | ```<=``` |
 | Diferit | ```!=``` | ```!=``` |
