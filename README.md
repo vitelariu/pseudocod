@@ -4,19 +4,43 @@ Pentru a copia folder-ul:
 ```
 git clone https://github.com/vitelariu/pseudocod
 ```
+
+### Linux
 Compilarea interpretului:
+
+```
+./build.sh
+```
+Pentru a interpreta un fisier:
+
+```
+./interpret {fisier sursa}
+```
+
+Pentru a interpreta comenzi direct din terminal:
+
+```
+./interpret
+```
+
+### Windows
+
+Compilarea interpretului:
+
 ```
 TODO
 ```
-> [!NOTE]
-> Pentru a interpreta un fisier:
-> ```
-> /interpret {fisier sursa}
-> ```
-> Pentru a interpreta comenzi direct din terminal:
-> ```
-> ./interpret
-> ```
+Pentru a interpreta un fisier:
+
+```
+/interpret {fisier sursa}
+```
+
+Pentru a interpreta comenzi direct din terminal:
+
+```
+/interpret
+```
 
 # Sintaxa
 
@@ -32,7 +56,7 @@ TODO
 | Asignare | ```<-``` | ```=``` |
 | Egal | ```=``` | ```==``` |
 | Mai mare | ```>``` | ```>``` |
-| Mai mic | ```>``` | ```>``` |
+| Mai mic | ```<`` | ```<``` |
 | Mai mare sau egal | ```>=``` | ```>=``` |
 | Mai mic sau egal | ```<=``` | ```<=``` |
 | Diferit | ```!=``` | ```!=``` |
@@ -85,7 +109,11 @@ TODO
 >
 > ```citeste x (bool)```
 >
+> ```citeste x (logica)```
+>
 > ```citeste y, z (bool)```
+>
+> ```citeste y, z (logica)```
 >
 > ----------------------------------------------------------------
 > 
@@ -106,10 +134,11 @@ Din tipul real in tipul intreg ```scrie [5 / 2]```
 
 output: ```2```
 
-### Alte lucruri importante
-Identarea este foarte importanta! Se face cu un **tab**, sau **4 spatii**.
+### Identare
 
-(Doua tab-uri = 8 spatii, etc)
+Identarea se face cu tab-uri sau spatii. Un tab este egal cu o identare. Un spatiu, pana la patru spatii este egal cu o identare.
+
+Spre exemplu: Daca avem Un tab + 3 spatii se ia ca 2 identari
 
 
 
