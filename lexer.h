@@ -19,7 +19,6 @@ enum tokens {
 	// Literals [DONE]
 	token_FLOAT,
 	token_STRING,
-	token_BOOL,
 
 	// Data types when reading [DONE]
 	// spre exemplu citeste x (numar natural, nenul)
@@ -188,7 +187,7 @@ int getNextToken() {
 		}
 		return token_FLOAT;
 	}
-	if(character == '\"') {
+	else if(character == '\"') {
 		do {
 			currentToken += character;
 			character = sourceCode[++p];
@@ -202,19 +201,18 @@ int getNextToken() {
 		else if(p != (int) sourceCode.length() - 1) {p++;}
 		return token_UNKNOWN;
 	}
-	if(character == 'A' or character == 'F') {
-		do {
-			currentToken += character;
-			character = sourceCode[++p];
-		}
-		while(isalpha(character) and p < (int) sourceCode.length() - 1);
-		if(currentToken == "Adevarat" or currentToken == "Fals") {
-			return token_BOOL;
-		}
-		else {
-			return token_IDENTIFIER;
-		}
+	else if(checkIfToken(sourceCode, p, "Adevarat")) {
+		currentToken = "1";
+		p += 8;
+		return token_FLOAT;
 	}
+	else if(checkIfToken(sourceCode, p, "Fals")) {
+		currentToken = "0";
+		p += 4;
+		return token_FLOAT;
+
+	}
+
 
 	// Keywords (Input, Output, If/Else, Structuri repetitive)
 	{

@@ -4,8 +4,8 @@
 #include "interpreter.h"
 
 int main(int argc, char **argv) {
-	argc--;
 
+	argc--;
 	if(argc == 0) {
 		/* Interpreteaza direct in terminal */
 		
@@ -27,7 +27,7 @@ int main(int argc, char **argv) {
 					
 
 				// token_FORCE_QUIT este un token care este returnat atunci cand
-				// pe linie, ultimul caracter este ' ', '\t'
+				//pe linie, ultimul caracter este ' ', '\t'
 				// Acesta trebuie ignorat
 				if(x != token_FORCE_QUIT) {
 					tokens.push_back(token);
@@ -35,9 +35,14 @@ int main(int argc, char **argv) {
 			}
 			p = 0;
 			character = ' '; // asta putea fi setat la orice in afara de $
+			
+
 
 			exprAst *Tree = parseEntry(tokens);
-			std::cout << interpret(Tree) << '\n';	
+			interpret(Tree);
+			
+			if(Tree->op == numberType) std::cout << Tree->number << '\n';
+			else std::cout << Tree->str << '\n';
 
 			delete Tree;
 			Tree = nullptr;
