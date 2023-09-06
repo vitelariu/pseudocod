@@ -223,8 +223,8 @@ void interpret(exprAst *Tree) {
 		case moduloType:
 			interpret(Tree->left);
 			interpret(Tree->right);
-			if(Tree->left->number != (int) Tree->left->number or Tree->right->number != (int) Tree->right->number) {
-				std::cout << "eroare nu poti face modulo pe numere reale\n";
+			if(Tree->left->number != (int) Tree->left->number or Tree->right->number != (int) Tree->right->number or Tree->right->number == 0) {
+				std::cout << "Operatie interzisa\n";
 				break;			
 			}
 			result = (int) Tree->left->number % (int) Tree->right->number;

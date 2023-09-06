@@ -317,7 +317,7 @@ class parse {
 				if(token.second == token_POWER) {
 					token = getNextTokenFromVector();
 
-					if((token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) and result->op == numberType) {
+					if((token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
 						exprTree = exprTree->make(powerType, exprTree, exp());
 
 					}
@@ -362,7 +362,7 @@ class parse {
 				else if(token.second == token_DIVISION) {
 					token = getNextTokenFromVector();
  
-					if((token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) and result->op == numberType) {
+					if((token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
 						exprTree = exprTree->make(divisionType, exprTree, factor());
 						//result = result / factor();
 					}
@@ -373,7 +373,7 @@ class parse {
 				else if(token.second == token_MODULO) {
 					token = getNextTokenFromVector();
  
-					if((token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) and result->op == numberType) {
+					if((token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
 						exprTree = exprTree->make(moduloType, exprTree, factor());
 					}
 					else {
@@ -408,7 +408,9 @@ class parse {
 				if(token.second == token_PLUS) {
 					token = getNextTokenFromVector();
 
-					if((token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) and result->op == numberType) {
+
+
+					if((token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
 						exprTree = exprTree->make(plusType, exprTree, term());
 
 					}
@@ -421,8 +423,10 @@ class parse {
 				}
 				else if(token.second == token_MINUS) {
 					token = getNextTokenFromVector();
+
+
  
-					if((token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) and result->op == numberType) {
+					if((token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
 						exprTree = exprTree->make(minusType, exprTree, term());
 
 						//result = result - term();
@@ -459,7 +463,7 @@ class parse {
 				if(token.second == token_GREATER) {
 					token = getNextTokenFromVector();
 
-					if((token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) and result->op == numberType) {
+					if((token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
 						exprTree = exprTree->make(greaterType, exprTree, addend());
 					}
 					else {
@@ -469,7 +473,7 @@ class parse {
 				else if(token.second == token_GREATER_EQUAL) {
 					token = getNextTokenFromVector();
 
-					if((token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) and result->op == numberType) {
+					if((token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
 						exprTree = exprTree->make(greaterEqualType, exprTree, addend());
 					}
 					else {
@@ -479,7 +483,7 @@ class parse {
 				else if(token.second == token_SMALLER) {
 					token = getNextTokenFromVector();
 
-					if((token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) and result->op == numberType) {
+					if((token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
 						exprTree = exprTree->make(smallerType, exprTree, addend());
 					//	result = result < addend();
 					}
@@ -490,7 +494,7 @@ class parse {
 				else if(token.second == token_SMALLER_EQUAL) {
 					token = getNextTokenFromVector();
 
-					if((token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) and result->op == numberType) {
+					if((token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
 						exprTree = exprTree->make(smallerEqualType, exprTree, addend());
 
 						//result = result <= addend();
@@ -502,7 +506,7 @@ class parse {
 				else if(token.second == token_EQUAL) {
 					token = getNextTokenFromVector();
 
-					if((token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) and result->op == numberType) {
+					if((token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
 						exprTree = exprTree->make(equalType, exprTree, addend());
 
 						//result = result == addend();
@@ -514,7 +518,7 @@ class parse {
 				else if(token.second == token_NOT_EQUAL) {
 					token = getNextTokenFromVector();
 
-					if((token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) and result->op == numberType) {
+					if((token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
 						exprTree = exprTree->make(notEqualType, exprTree, addend());
 
 						//result = result != addend();
@@ -552,9 +556,8 @@ class parse {
 				if(token.second == token_AND) {
 					token = getNextTokenFromVector();
 
-					if((token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_PLUS or token.second == token_NOT) and result->op == numberType) {
+					if((token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
 						exprTree = exprTree->make(andType, exprTree, comp());
-						//result = result && comp();
 					}
 					else {
 						std::cout << "error4.0";
@@ -600,7 +603,7 @@ class parse {
 				if(token.second == token_OR) {
 					token = getNextTokenFromVector();
 	 
-					if((token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_PLUS or token.second == token_NOT) and result->op == numberType) {
+					if((token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
 						exprTree = exprTree->make(orType, exprTree, logic());
 					}
 					else {
