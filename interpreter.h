@@ -3,6 +3,78 @@
 #include "parser.h"
 
 
+// 0 - not used
+// 1 - true
+// -1 - false
+int isComparationTrue{};
+
+
+/* Functie care returneaza string-ul din ghilimele si size-ul string-ului
+ ex: ii dai "a" si iti da a, 1
+ chestii precum "\\" se transforma in \, 1
+ -1 ca size inseamna eroare
+*/
+std::string getString(std::string n) {
+	std::string new_str{};
+	for(int i{1}; i < (int) n.length() - 1; i++) {
+		if(n[i] == '\\') {
+			char next = n[++i];
+			switch(next) {
+				case '\\':
+					new_str += '\\';
+					break;
+				case '\"':
+					new_str += '\"';
+					break;
+				case '\'':
+					new_str += '\'';
+					break;
+				case 't':
+					new_str += '\t';
+					break;
+				case '?':
+					new_str += '\?';
+					break;
+				case 'a':
+					new_str += '\a';
+					break;
+				case 'b':
+					new_str += '\b';
+					break;
+				case 'f':
+					new_str += '\f';
+					break;
+				case 'n':
+					new_str += '\n';
+					break;
+				case 'r':
+					new_str += '\r';
+					break;
+				case 'v':
+					new_str += '\v';
+					break;
+				default:
+					break;
+			}
+
+		}
+		else {
+			new_str += n[i];
+		}
+	}
+	return new_str;
+}
+
+std::string getStringRaw(std::string n) {
+	std::string new_str{};
+	for(int i{1}; i < (int) n.length() - 1; i++) {
+		new_str += n[i];
+	}
+
+	return new_str;
+}
+
+// Functie care verifica diferite flag-uri
 void checkFlags(exprAst *Tree, double result) {
 	if(Tree->flags[0]) {
 		result = (int) result;
@@ -12,6 +84,12 @@ void checkFlags(exprAst *Tree, double result) {
 	}
 	if(Tree->flags[2]) {
 		result = !result;
+	}
+	if(Tree->flags[3]) {
+		if(isComparationTrue == 1) result = 1;
+		else if(isComparationTrue == -1) result = 0;
+
+		isComparationTrue = 0;
 	}
 	Tree->number = result;
 }
@@ -25,6 +103,16 @@ void clean(exprAst *Tree){
 
 bool checkIfChildIsString(exprAst *node) {
 	return node->op == stringType;
+}
+
+
+int getLength(std::string x) {
+	int raw_l = x.length() - 2;
+	int escape_cnt{};
+	for(int i{}; i < (int) x.length(); i++) {
+		if(x[i] == '\\') escape_cnt++;
+	}
+	return raw_l - escape_cnt;
 }
 
 std::string multiply_str(std::string x, double number) {
@@ -48,12 +136,21 @@ std::string multiply_str(std::string x, double number) {
 	return final_str;
 }
 
-std::string getRaw(std::string x) {
-	std::string raw{};
-	for(int i{1}; i < (int) x.length() - 1; i++) {
-		raw += x[i];
+
+
+
+void aux(exprAst *node) {
+	if(isComparationTrue == 1) {
+		node->op = numberType;
+		node->number = 1;
+		isComparationTrue = 0;
 	}
-	return raw;
+	else if(isComparationTrue == -1) {
+		node->op = numberType;
+		node->number = 0;
+		isComparationTrue = 0;			
+	}
+
 }
 
 void interpret(exprAst *Tree) {
@@ -63,6 +160,7 @@ void interpret(exprAst *Tree) {
 	}
 	else if(Tree->op == stringType) {
 		return;
+
 	} 
 
 	double result{};
@@ -70,8 +168,14 @@ void interpret(exprAst *Tree) {
 
 	switch(Tree->op) {
 		case orType:
+
 			interpret(Tree->left);
+			aux(Tree->left);
+
+			
 			interpret(Tree->right);
+			aux(Tree->right);
+
 			result = Tree->left->number || Tree->right->number;
 
 			Tree->op = numberType;
@@ -80,7 +184,11 @@ void interpret(exprAst *Tree) {
 			break;
 		case andType:
 			interpret(Tree->left);
+			aux(Tree->left);
+
 			interpret(Tree->right);
+			aux(Tree->right);
+
 			result = Tree->left->number && Tree->right->number;
 
 			Tree->op = numberType;
@@ -91,70 +199,225 @@ void interpret(exprAst *Tree) {
 		case greaterType:
 			interpret(Tree->left);
 			interpret(Tree->right);
-			result = Tree->left->number > Tree->right->number;
-
+			
 			Tree->op = numberType;
-			checkFlags(Tree, result);
+
+			if((Tree->left->op == stringType) ^ (Tree->right->op == stringType)) {
+				std::cout << "eroare123\n";
+				break;
+			}
+			else if(Tree->left->op == stringType and Tree->right->op == stringType) {
+				if(getString(Tree->left->str)[0] > getString(Tree->right->str)[0]) {
+					checkFlags(Tree, 1);
+				}
+				else {
+					checkFlags(Tree, 0);
+				}
+			}
+			else {
+				if(isComparationTrue == 0 or isComparationTrue == 1) {
+					if(Tree->left->number > Tree->right->number) {
+						isComparationTrue = 1;
+					}
+					else {
+						isComparationTrue = -1;
+					}
+				}
+				checkFlags(Tree, Tree->right->number);
+			}
+
+
 			clean(Tree);
 			break;
 
 		case greaterEqualType:
 			interpret(Tree->left);
 			interpret(Tree->right);
-			result = Tree->left->number >= Tree->right->number;
 
 			Tree->op = numberType;
-			checkFlags(Tree, result);
+
+			Tree->op = numberType;
+			if((Tree->left->op == stringType) ^ (Tree->right->op == stringType)) {
+				std::cout << "eroare123\n";
+				break;
+			}
+			else if(Tree->left->op == stringType and Tree->right->op == stringType) {
+				if(getString(Tree->left->str)[0] >= getString(Tree->right->str)[0]) {
+					checkFlags(Tree, 1);
+				}
+				else {
+					checkFlags(Tree, 0);
+				}
+			}
+			else {
+				if(isComparationTrue == 0 or isComparationTrue == 1) {
+					if(Tree->left->number >= Tree->right->number) {
+						isComparationTrue = 1;
+					}
+					else {
+						isComparationTrue = -1;
+					}
+				}
+				checkFlags(Tree, Tree->right->number);
+			}
+
+
+
 			clean(Tree);
+
 			break;
 
 		case smallerType:
 			interpret(Tree->left);
 			interpret(Tree->right);
-			result = Tree->left->number < Tree->right->number;
 
 			Tree->op = numberType;
-			checkFlags(Tree, result);
+			if((Tree->left->op == stringType) ^ (Tree->right->op == stringType)) {
+				std::cout << "eroare123\n";
+				break;
+			}
+			else if(Tree->left->op == stringType and Tree->right->op == stringType) {
+				if(getString(Tree->left->str)[0] < getString(Tree->right->str)[0]) {
+					checkFlags(Tree, 1);
+				}
+				else {
+					checkFlags(Tree, 0);
+				}
+			}
+			else {
+				if(isComparationTrue == 0 or isComparationTrue == 1) {
+					if(Tree->left->number < Tree->right->number) {
+						isComparationTrue = 1;
+					}
+					else {
+						isComparationTrue = -1;
+					}
+				}
+				checkFlags(Tree, Tree->right->number);
+			}
+
+
+
+
 			clean(Tree);
+
 			break;
 
 		case smallerEqualType:
 			interpret(Tree->left);
 			interpret(Tree->right);
-			result = Tree->left->number <= Tree->right->number;
 
 			Tree->op = numberType;
-			checkFlags(Tree, result);
+			if((Tree->left->op == stringType) ^ (Tree->right->op == stringType)) {
+				std::cout << "eroare123\n";
+				break;
+			}
+			else if(Tree->left->op == stringType and Tree->right->op == stringType) {
+				if(getString(Tree->left->str)[0] <= getString(Tree->right->str)[0]) {
+					checkFlags(Tree, 1);
+				}
+				else {
+					checkFlags(Tree, 0);
+				}
+			}
+			else {
+				if(isComparationTrue == 0 or isComparationTrue == 1) {
+					if(Tree->left->number <= Tree->right->number) {
+						isComparationTrue = 1;
+					}
+					else {
+						isComparationTrue = -1;
+					}
+				}
+				checkFlags(Tree, Tree->right->number);
+			}
+
 			clean(Tree);
+
 			break;
 
 		case equalType:
 			interpret(Tree->left);
 			interpret(Tree->right);
-			result = Tree->left->number == Tree->right->number;
 
 			Tree->op = numberType;
-			checkFlags(Tree, result);
+
+			if((Tree->left->op == stringType) ^ (Tree->right->op == stringType)) {
+				std::cout << "eroare123\n";
+				break;
+			}
+			else if(Tree->left->op == stringType and Tree->right->op == stringType) {
+				if(getString(Tree->left->str) == getString(Tree->right->str)) {
+					checkFlags(Tree, 1);
+				}
+				else {
+					checkFlags(Tree, 0);
+				}
+			}
+			else {
+				if(isComparationTrue == 0 or isComparationTrue == 1) {
+					if(Tree->left->number == Tree->right->number) {
+						isComparationTrue = 1;
+					}
+					else {
+						isComparationTrue = -1;
+					}
+				}
+
+
+				checkFlags(Tree, Tree->right->number);
+			}
+		
 			clean(Tree);
 			break;
 
 		case notEqualType:
 			interpret(Tree->left);
 			interpret(Tree->right);
-			result = Tree->left->number != Tree->right->number;
 
 			Tree->op = numberType;
-			checkFlags(Tree, result);
+			if((Tree->left->op == stringType) ^ (Tree->right->op == stringType)) {
+				std::cout << "eroare123\n";
+				break;
+			}
+			else if(Tree->left->op == stringType and Tree->right->op == stringType) {
+				if(getString(Tree->left->str) != getString(Tree->right->str)) {
+					checkFlags(Tree, 1);
+				}
+				else {
+					checkFlags(Tree, 0);
+				}
+			}
+			else {
+				if(isComparationTrue == 0 or isComparationTrue == 1) {
+					if(Tree->left->number != Tree->right->number) {
+						isComparationTrue = 1;
+					}
+					else {
+						isComparationTrue = -1;
+					}
+				}
+				checkFlags(Tree, Tree->right->number);
+			}
+
 			clean(Tree);
+
+
 			break;
 
 		case plusType:
 			interpret(Tree->left);
 			interpret(Tree->right);
+
+			if((Tree->left->op == stringType) ^ (Tree->right->op == stringType)) {
+				// eroare, avem string + numar
+				std::cout << "eroare string + numar\n";
+				break;
+			}
 			
 			if(Tree->left->op == stringType and Tree->left->op == stringType) {
 				Tree->op = stringType;
-				Tree->str = "\"" + getRaw(Tree->left->str) + getRaw(Tree->right->str) + "\"";
+				Tree->str = "\"" + getStringRaw(Tree->left->str) + getStringRaw(Tree->right->str) + "\"";
 
 				clean(Tree);
 
@@ -248,4 +511,13 @@ void interpret(exprAst *Tree) {
 
 
 	return;
+}
+
+void interpretEntry(exprAst *Tree) {
+	interpret(Tree);
+	if(isComparationTrue) {
+		aux(Tree);
+		checkFlags(Tree, Tree->number);
+	}
+	
 }

@@ -187,19 +187,54 @@ int getNextToken() {
 		}
 		return token_FLOAT;
 	}
-	else if(character == '\"') {
-		do {
-			currentToken += character;
-			character = sourceCode[++p];
-		}
-		while((character != '\"' or sourceCode[p-1] == '\\') and p < (int) sourceCode.length() - 1);
+	else if(character == '\"' and p < (int) sourceCode.length() - 2) {
+		int start = p;
 		currentToken += character;
-		if(character == '\"' and sourceCode[p-1] != '\\') {
-			p++;
-			return token_STRING;
+		while(p < (int) sourceCode.length() - 1) {	
+			character = sourceCode[++p];
+			if(character == '\"') {
+				// check previous escape chars
+				int end = p - 1;
+				int escape{};
+				for(int i = end; i > start; i--) {
+					if(sourceCode[i] == '\\') escape++;
+					else break;
+				}
+				if(escape % 2 == 0) {
+					currentToken += character;
+					p++;
+					return token_STRING;
+				}
+				else if(escape % 2 == 1) {
+					currentToken += character;
+				}
+			}
+			else {
+				currentToken += character;
+			}
 		}
-		else if(p != (int) sourceCode.length() - 1) {p++;}
-		return token_UNKNOWN;
+		if(character == '\"') {
+			// check previous escape chars
+			int end = p - 1;
+			int escape{};
+			for(int i = end; i > start; i--) {
+				if(sourceCode[i] == '\\') escape++;
+				else break;
+			}
+			if(escape % 2 == 0) {
+				currentToken += character;
+				p++;
+				return token_STRING;
+			}
+			else if(escape % 2 == 1) {
+				std::cout << "eroare string\n";
+				return token_UNKNOWN;
+			}
+		}
+		else {
+			std::cout << "eroare string\n";
+			return token_UNKNOWN;
+		}
 	}
 	else if(checkIfToken(sourceCode, p, "Adevarat")) {
 		currentToken = "1";

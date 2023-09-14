@@ -37,9 +37,8 @@ int main(int argc, char **argv) {
 			character = ' '; // asta putea fi setat la orice in afara de $
 			
 
-
 			exprAst *Tree = parseEntry(tokens);
-			interpret(Tree);
+			interpretEntry(Tree);
 			
 			if(Tree->op == numberType) std::cout << Tree->number << '\n';
 			else std::cout << Tree->str << '\n';
