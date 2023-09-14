@@ -60,6 +60,8 @@ Pentru a interpreta comenzi direct din terminal:
 | Mai mare sau egal | ```>=``` | ```>=``` |
 | Mai mic sau egal | ```<=``` | ```<=``` |
 | Diferit | ```!=``` | ```!=``` |
+| Si | ```si``` | ```and``` |
+| Sau | ```sau``` | ```or``` |
 
 
 ### Intrare / Iesire
