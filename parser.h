@@ -6,7 +6,7 @@
 #include "lexer.h"
 #include "errors.h"
 
-// Astea sunt folosite pentru a determina tipul de node din ast-ul de expresii
+/// Astea sunt folosite pentru a determina tipul de node din ast-ul de expresii
 enum types {
 	numberType,
 	stringType,
@@ -33,17 +33,27 @@ enum types {
 	powerType,
 };
 
-
+/** AST = Abstract syntax tree. E o clasa ce reprezinta un arbore binar in care fiecare nod poate
+ fi evaluat la o singura valoare, cu proprietatea ca evaluarea radacinii da rezultatul evaluarii
+ expresiei originale. Mai jos este definita structura nodurilor unui astfel de arbore (ar trebui
+ redenumita clasa la exprAstNode)
+*/
 class exprAst {
+	public:
+		const static int INT_FLAG = 0;
+		const static int NEGATIVE_FLAG = 1;
+		const static int NOT_GATE_FLAG = 2;
+		const static int CMP_BUG_FIX_FLAG = 3;
+
     public:
 		// Dupa numarul de la op ne dam seama ce fel de node este
 		// ex: 0 -> numar (doar cand op-ul este 0, int-ul number este valid)
 		// 1 -> string (doar cand op-ul este 1, string-ul str este valid)
 		// 2 -> plus (se va folosi pointerele de mai jos (exprAst *left/right) pentru a reprezenta nod-urile)
 		// etc etc
-        int op = -1;
-        double number{};
-		std::string str{};
+        int op;
+        double number;
+		std::string str;
 
 		// flags
 		// - flags[0]
@@ -52,101 +62,61 @@ class exprAst {
 		//
 		// - flags[1]
 		// daca este true, numarul, sau expresia in cazul -(1 + 2) etc, va fi negativa
-		// 
+		//
 		// - flags[2]
 		// daca este true, numarul sau expr va fi trecuta prin not gate
 		//
 		// - flags[3]
 		// rol in fixarea unui bug legat de comparari
-		bool flags[4] = {};
+		bool flags[4];
 
+        exprAst *left;
+        exprAst *right;
 
-        exprAst *left = nullptr;
-        exprAst *right = nullptr;
-        
-		// Functii pentru a construii ast-ul
-		// 3 tipuri de functii:
-		//
-		// 1.
-		//
-		//    -----
-		//    |num|
-		exprAst *make(double x) {
-			exprAst *newNode = new exprAst;
-			newNode->op = numberType;
+        exprAst() : op(-1), number(0), str(), flags(), left(nullptr), right(nullptr) {}
 
-			newNode->number = x;
+        exprAst(double x) : op(numberType), number(x), str(), flags(), left(nullptr), right(nullptr) {}
 
-			return newNode;
-		}
-		// 2.
-		//
-		//    -----
-		//    |str|
-		exprAst *make(std::string x) {
-			exprAst *newNode = new exprAst;
-			newNode->op = stringType;
+        exprAst(std::string x) : op(stringType), number(0), str(x), flags(), left(nullptr), right(nullptr) {}
 
-			newNode->str = x;
+        exprAst(int Type, exprAst* left, exprAst* right) : op(Type), number(0), str(), flags(), left(left), right(right) {}
 
-			return newNode;
-		}
-/*
-		 3.
-		
-		     ____
-		     |op|
-		     /  \
-		    /    \
-		 |node|  |node|
-		
-		 "node"-urile pot fi numere, string-uri, sau alte op
-		 ex:
-		
-		         |+|
-		         / \
-		        /   \
-		      |69|  |*|
-		            / \
-		           /   \
-		          |2|  |3|
-*/
-		exprAst *make(int Type, exprAst* left, exprAst* right) {
-			exprAst *newNode = new exprAst;
+        virtual ~exprAst()
+        {
+        	delete left;
+        	delete right;
+        }
 
-			newNode->op = Type;
-
-			newNode->left = left;
-			newNode->right = right;
-
-			return newNode;
-		}
+        friend std::ostream& operator<<(std::ostream& out, const exprAst* const ast)
+        {
+        	out << "Op: " << ast->op << '\n';
+			out << "Number: " << ast->number << "\n\n";
+			if(ast->left != nullptr) {
+				out << ast->left;
+			}
+			if(ast->right != nullptr) {
+				out << ast->right;
+			}
+			return out;
+        }
 };
 
-
-
-
-
-
-// erorile sunt puse provizoriu
-
-
+/// Clasa pentru transformarea unei liste de tokene intr-un AST. Erorile sunt puse provizoriu si vor fi modificate in viitor
 class parse {
 	private:
 		int index{}; // used for vector
-					 
+
 		// must be 0 after execution
 		int parenth_cnt{}, square_cnt{};
-												
+
 		std::pair<std::string, int> token;
 		std::vector<std::pair<std::string, int>> tokens;
 
-	
+
 		void match(int type) {
 			if(token.second != type) {
 				std::cout << "eroare match";
-
-			} 
+			}
 		}
 
 		std::pair<std::string, int> getNextTokenFromVector() {
@@ -159,27 +129,21 @@ class parse {
 			return token;
 		}
 
+		parse(std::vector<std::pair<std::string, int>>&& tokens) : tokens(std::move(tokens)) {}
 
-	public:
+		parse(const std::vector<std::pair<std::string, int>>& tokens) : tokens(tokens) {}
 
-		parse(std::vector<std::pair<std::string, int>> tokens) {
-			this->tokens = tokens;
-			
-
-		}
-
+	private:
 		exprAst *exp() {
 			if(token.second == token_FLOAT) {
 				double number = std::stod(token.first);
-				exprAst *nodeNumber = new exprAst;
-				nodeNumber = nodeNumber->make(number);
+				exprAst *nodeNumber = new exprAst(number);
 
 				return nodeNumber;
 			}
 			else if(token.second == token_STRING) {
 				std::string str = token.first;
-				exprAst *nodeString = new exprAst;
-				nodeString = nodeString->make(str);
+				exprAst *nodeString = new exprAst(str);
 
 				return nodeString;
 			}
@@ -189,16 +153,14 @@ class parse {
 					token = getNextTokenFromVector();
 					token.second = token_FORCE_QUIT;
 
-					exprAst *nodeNumber = new exprAst;
-					nodeNumber = nodeNumber->make(0);
+					exprAst *nodeNumber = new exprAst(0);
 
 					return nodeNumber;
 				}
 
 				parenth_cnt++;
 				if(index == (int) tokens.size()) {
-					exprAst *nodeNumber = new exprAst;
-					nodeNumber = nodeNumber->make(0);
+					exprAst *nodeNumber = new exprAst(0);
 
 					return nodeNumber;
 
@@ -215,24 +177,20 @@ class parse {
 				if(tokens[index].second == token_RIGHT_SQUARE) {
 					token = getNextTokenFromVector();
 					token.second = token_FORCE_QUIT;
-					
-					exprAst *nodeNumber = new exprAst;
-					nodeNumber = nodeNumber->make(0);
-					return nodeNumber;
 
+					exprAst *nodeNumber = new exprAst(0);
+					return nodeNumber;
 				}
 
 
 				square_cnt++;
 
 				if(index == (int) tokens.size()) {
-					exprAst *nodeNumber = new exprAst;
-					nodeNumber = nodeNumber->make(0);
+					exprAst *nodeNumber = new exprAst(0);
 
 					return nodeNumber;
-
 				}
-				
+
 				exprAst *nested = expr();
 				nested->flags[0] = true;
 				nested->flags[3] = true;
@@ -245,8 +203,7 @@ class parse {
 				if(index < (int) tokens.size()) {token = getNextTokenFromVector();}
 				else {
 					std::cout << "eroare bitch\n";
-					exprAst *nodeNumber = new exprAst;
-					nodeNumber = nodeNumber->make(0);
+					exprAst *nodeNumber = new exprAst(0);
 					return nodeNumber;
 
 				}
@@ -260,8 +217,7 @@ class parse {
 				if(index < (int) tokens.size()) {token = getNextTokenFromVector();}
 				else {
 					std::cout << "eroare bitch2 de data asta\n";
-					exprAst *nodeNumber = new exprAst;
-					nodeNumber = nodeNumber->make(0);
+					exprAst *nodeNumber = new exprAst(0);
 					return nodeNumber;
 
 				}
@@ -274,8 +230,7 @@ class parse {
 				if(index < (int) tokens.size()) {token = getNextTokenFromVector();}
 				else {
 					std::cout << "eroare aksdhGF\n";
-					exprAst *nodeNumber = new exprAst;
-					nodeNumber = nodeNumber->make(0);
+					exprAst *nodeNumber = new exprAst(0);
 					return nodeNumber;
 
 				}
@@ -290,18 +245,17 @@ class parse {
 				}
 
 			}
-			
+
 			std::cout << "eroare 99";
-			
-			
-			exprAst *nodeNumber = new exprAst;
-			nodeNumber = nodeNumber->make(0);
+
+
+			exprAst *nodeNumber = new exprAst(0);
 			return nodeNumber;
 
 		}
 
 		exprAst *factor() {
-			exprAst *exprTree = new exprAst;
+			exprAst *exprTree = nullptr;
 			exprAst *result = exp();
 			exprTree = result;
 
@@ -331,8 +285,7 @@ class parse {
 					token = getNextTokenFromVector();
 
 					if((token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
-						exprTree = exprTree->make(powerType, exprTree, exp());
-
+						exprTree = new exprAst(powerType, exprTree, exp());
 					}
 					else {
 						std::cout << "error8";
@@ -346,9 +299,9 @@ class parse {
 			return exprTree;
 
 		}
-		
+
 		exprAst *term() {
-			exprAst *exprTree = new exprAst;
+			exprAst *exprTree = nullptr;
 			exprAst *result = factor();
 			exprTree = result;
 
@@ -364,9 +317,9 @@ class parse {
 
 				if(token.second == token_ASTERISK) {
 					token = getNextTokenFromVector();
- 
+
 					if(token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT or token.second == token_STRING) {
-						exprTree = exprTree->make(multiplyType, exprTree, factor());
+						exprTree = new exprAst(multiplyType, exprTree, factor());
 					}
 					else {
 						std::cout << "error1";
@@ -374,9 +327,9 @@ class parse {
 				}
 				else if(token.second == token_DIVISION) {
 					token = getNextTokenFromVector();
- 
+
 					if((token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
-						exprTree = exprTree->make(divisionType, exprTree, factor());
+						exprTree = new exprAst(divisionType, exprTree, factor());
 						//result = result / factor();
 					}
 					else {
@@ -385,9 +338,9 @@ class parse {
 				}
 				else if(token.second == token_MODULO) {
 					token = getNextTokenFromVector();
- 
+
 					if((token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
-						exprTree = exprTree->make(moduloType, exprTree, factor());
+						exprTree = new exprAst(moduloType, exprTree, factor());
 					}
 					else {
 						std::cout << "error69";
@@ -404,7 +357,7 @@ class parse {
 		}
 
 		exprAst *addend() {
-			exprAst *exprTree = new exprAst;
+			exprAst *exprTree = nullptr;
 			exprAst *result = term();
 			exprTree = result;
 
@@ -424,11 +377,11 @@ class parse {
 
 
 					if((token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
-						exprTree = exprTree->make(plusType, exprTree, term());
+						exprTree = new exprAst(plusType, exprTree, term());
 
 					}
 					else if((token.second == token_STRING or token.second == token_LEFT_PARENTH) or result->op == stringType) {
-						exprTree = exprTree->make(plusType, exprTree, term());
+						exprTree = new exprAst(plusType, exprTree, term());
 					}
 					else {
 						std::cout << "error4.1";
@@ -438,9 +391,9 @@ class parse {
 					token = getNextTokenFromVector();
 
 
- 
+
 					if((token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
-						exprTree = exprTree->make(minusType, exprTree, term());
+						exprTree = new exprAst(minusType, exprTree, term());
 
 						//result = result - term();
 					}
@@ -452,14 +405,14 @@ class parse {
 					std::cout << "error6";
 				}
 			}
-		
+
 
 			return exprTree;
 
 		}
 
 		exprAst *comp() {
-			exprAst *exprTree = new exprAst;
+			exprAst *exprTree = nullptr;
 			exprAst *result = addend();
 			exprTree = result;
 
@@ -477,7 +430,7 @@ class parse {
 					token = getNextTokenFromVector();
 
 					if(token.second == token_FLOAT or token.second == token_STRING or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) {
-						exprTree = exprTree->make(greaterType, exprTree, addend());
+						exprTree = new exprAst(greaterType, exprTree, addend());
 					}
 					else {
 						std::cout << "error4.2";
@@ -487,7 +440,7 @@ class parse {
 					token = getNextTokenFromVector();
 
 					if(token.second == token_FLOAT or token.second == token_STRING or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) {
-						exprTree = exprTree->make(greaterEqualType, exprTree, addend());
+						exprTree = new exprAst(greaterEqualType, exprTree, addend());
 					}
 					else {
 						std::cout << "error4.3";
@@ -497,7 +450,7 @@ class parse {
 					token = getNextTokenFromVector();
 
 					if(token.second == token_FLOAT or token.second == token_STRING or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) {
-						exprTree = exprTree->make(smallerType, exprTree, addend());
+						exprTree = new exprAst(smallerType, exprTree, addend());
 					}
 					else {
 						std::cout << "error4.4";
@@ -507,7 +460,7 @@ class parse {
 					token = getNextTokenFromVector();
 
 					if(token.second == token_FLOAT or token.second == token_STRING or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) {
-						exprTree = exprTree->make(smallerEqualType, exprTree, addend());
+						exprTree = new exprAst(smallerEqualType, exprTree, addend());
 
 					}
 					else {
@@ -518,7 +471,7 @@ class parse {
 					token = getNextTokenFromVector();
 
 					if(token.second == token_FLOAT or token.second == token_STRING or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) {
-						exprTree = exprTree->make(equalType, exprTree, addend());
+						exprTree = new exprAst(equalType, exprTree, addend());
 
 					}
 					else {
@@ -529,7 +482,7 @@ class parse {
 					token = getNextTokenFromVector();
 
 					if(token.second == token_FLOAT or token.second == token_STRING or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) {
-						exprTree = exprTree->make(notEqualType, exprTree, addend());
+						exprTree = new exprAst(notEqualType, exprTree, addend());
 
 					}
 					else {
@@ -542,13 +495,12 @@ class parse {
 			}
 
 			return exprTree;
-	
+
 
 		}
 
 		exprAst *logic() {
-			exprAst* exprTree = new exprAst;
-
+			exprAst* exprTree = nullptr;
 			exprAst* result = comp();
 
 			exprTree = result;
@@ -566,7 +518,7 @@ class parse {
 					token = getNextTokenFromVector();
 
 					if((token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
-						exprTree = exprTree->make(andType, exprTree, comp());
+						exprTree = new exprAst(andType, exprTree, comp());
 					}
 					else {
 						std::cout << "error4.0";
@@ -578,25 +530,25 @@ class parse {
 			}
 
 			return exprTree;
-	
+
 		}
 
 		exprAst *expr() {
 			/*
 			Arithmetic expression parser / interpreter.
 
-			
+
 			expr : logic ((OR) logic)*
 			logic : comp ((AND) comp)*
 			comp :  addend ((GREATER | GREATER_EQUAL | SMALLER | SMALLER_EQUAL | EQUAL | NOT_EQUAL) addend)*
 			addend : term ((PLUS | MINUS) term)*
 			term   : factor ((MUL | DIV | MOD) factor)*
 			factor : exp ((POW) exp)*
-			exp : INTEGER | LPAREN expr RPAREN | LSQUARE expr SQUARE | NOT_EQUAL exp 
+			exp : INTEGER | LPAREN expr RPAREN | LSQUARE expr SQUARE | NOT_EQUAL exp
 			*/
-			exprAst* exprTree = new exprAst;
+			exprAst* exprTree = nullptr;
 
-			token = getNextTokenFromVector();
+			getNextTokenFromVector();
 			exprAst *result = logic();
 
 			exprTree = result;
@@ -608,22 +560,14 @@ class parse {
 
 				if(token.second != token_OR) break;
 
+				getNextTokenFromVector();
 
-				if(token.second == token_OR) {
-					token = getNextTokenFromVector();
-	 
-					if((token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
-						exprTree = exprTree->make(orType, exprTree, logic());
-					}
-					else {
-						std::cout << "error9";
-					}
+				if((token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
+					exprTree = new exprAst(orType, exprTree, logic());
 				}
 				else {
-					std::cout << "error10";
+					std::cout << "error9";
 				}
-
-
 			}
 
 			if(token.second == token_RIGHT_PARENTH) {
@@ -639,42 +583,25 @@ class parse {
 			}
 
 			return exprTree;
-
 		}
 
+		/// Punct de inceput conversie tokene in AST. Poate un nume mai bun este convert.
 		exprAst *start() {
 			exprAst *result = expr();
 
 			if(parenth_cnt != 0 or square_cnt != 0) {
-				std::cout << "inconsistent brackets\n";
+				delete result;
+				throw "inconsistent brackets\n";
 			}
 
 			return result;
-		}		
+		}
+
+	public:
+
+		/// Functia principala, converteste expresia la un AST
+		static exprAst *parseEntry(const std::vector<std::pair<std::string, int>>& tokens) {
+			parse Parser(tokens);
+			return Parser.start();
+		}
 };
-
-
-// functie auxiliara printeaza tot ast-ul
-
-
-void printAst(exprAst *exprTree) {
-	std::cout << "Op: " << exprTree->op << '\n';
-	std::cout << "Number: " << exprTree->number << "\n\n";
-	if(exprTree->left != nullptr) {
-		printAst(exprTree->left);
-	}
-	if(exprTree->right != nullptr) {
-		printAst(exprTree->right);
-	}
-}
-
-exprAst *parseEntry(std::vector<std::pair<std::string, int>> tokens) {
-	parse Parser(tokens);
-
-
-	
-	exprAst *exprTree = Parser.start();
-	
-
-	return exprTree;
-}
