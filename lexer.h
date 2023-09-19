@@ -227,12 +227,10 @@ int getNextToken() {
 				return token_STRING;
 			}
 			else if(escape % 2 == 1) {
-				std::cout << "eroare string\n";
 				return token_UNKNOWN;
 			}
 		}
 		else {
-			std::cout << "eroare string\n";
 			return token_UNKNOWN;
 		}
 	}

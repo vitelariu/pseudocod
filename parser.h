@@ -4,6 +4,7 @@
 #include <string>
 #include <type_traits>
 #include "lexer.h"
+#include "errors.h"
 
 // Astea sunt folosite pentru a determina tipul de node din ast-ul de expresii
 enum types {
