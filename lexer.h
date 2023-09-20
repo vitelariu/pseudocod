@@ -69,7 +69,7 @@ enum tokens {
 int p{};
 char character{};
 
-/// Functie auxiliara, verifica daca urmatorul caracter poate fi considerat drept facand parte dintr-un alt cuvant
+/// Functie auxiliara, verifica daca urmatorul caracter poate fi considerat drept facand parte dintr-un alt token
 bool checkNextCharacterDifferentToken(const std::string &code, int i) {
 	const char nextCharacter = code[i];
 	// cuvantul nu se termina acolo
@@ -80,7 +80,7 @@ bool checkNextCharacterDifferentToken(const std::string &code, int i) {
 	if(nextCharacter >= '0' && nextCharacter <= '9')
 		return false;
 
-	// cuvantul e urmat de whitespace, poate mai trebuie adaugate
+	// cuvantul e urmat de whitespace, poate mai trebuie adaugate alte tipuri de caractere whitespace
 	if(nextCharacter == ' ' || nextCharacter == '\n' || nextCharacter == '\t')
 		return true;
 
@@ -107,7 +107,7 @@ bool checkNextCharacterDifferentToken(const std::string &code, int i) {
 	return false;
 }
 
-/// Functie auxiliara, verifica daca code[start .. start + word.length()] == word si daca cuvantul se incheie acolo
+/// Functie auxiliara, verifica daca code[start .. start + word.length()] == word si daca tockenul se incheie acolo
 bool checkIfToken(const std::string &code, int start, const std::string& word) {
 	int i;
 	bool poate_fi = true;
@@ -117,23 +117,27 @@ bool checkIfToken(const std::string &code, int start, const std::string& word) {
 		if(word[i] != code[start + i])
 			poate_fi=false;
 
-	// daca toate caracterele sunt egale, verificam daca cuvantul s-a terminat
+	// daca toate caracterele sunt egale, verificam daca tockenul s-a terminat
 	return poate_fi && checkNextCharacterDifferentToken(code, start + i);
 }
 
+/**
+Ia urmatorul token si pune-l in currentToken. Modifica variabilele globale 'p', 'character' si 'currentToken'.
+Probabil ar fi o idee buna sa nu mai folosim variabile globale pentru ca pot aparea erori si in cazul ala
+pierzi starea precedenta a variabilelor.
+@return Returneaza tipul de token; Un token este un keyword / cuvant + (un spatiu sau end on line)
+*/
 int getNextToken() {
+	if(p < 0 or p >= (int)sourceCode.length())
+	{
+		currentToken = "";
+		throw "getNextToken called with invalid p = " + std::to_string(p) + " when source code length = " + std::to_string(sourceCode.length());
+	}
+
 	character = sourceCode[p];
 	currentToken = "";
 
-
-	/*
-		Ia urmatorul token si pune-l in currentToken;
-		Returneaza tipul de token; Un token este un keyword / cuvant + (un spatiu sau end on line)
-	*/
-
-
 	// Spatiu
-	
 	if(character == ' ' or character == '\t') {
 		if(p == 0) {
 			// Numara identarea (este la inceputul liniei)
@@ -152,7 +156,7 @@ int getNextToken() {
 
 				character = sourceCode[++p];
 			}
-			while((character == ' ' or character == '\t') and p < (int) sourceCode.length());
+			while((character == ' ' or character == '\t'));
 
 			identation_cnt += tabs_cnt; // tab-uri sunt echivalente cu identarea
 			identation_cnt += spaces_cnt / 4 + (spaces_cnt % 4 and 1); // formula pentru a
@@ -162,7 +166,7 @@ int getNextToken() {
 			return token_IDENTATION;
 
 		}
-		else {
+		else { // Ce a vrut sa spuna autorul aici?
 			p++;
 			if(p < (int) sourceCode.length() - 1) {return getNextToken();}
 			else {
@@ -171,26 +175,28 @@ int getNextToken() {
 		}
 	}
 
-	// Literals
+	// Literals (numere, siruri de caractere, Adevarat/Fals)
 	if(isdigit(character)) {
 		do {
 			currentToken += character;
 			character = sourceCode[++p];
 		}
-		while(isdigit(character) and p < (int) sourceCode.length() - 1);
+		while(isdigit(character));
 		if(character == '.') {
 			do {
 				currentToken += character;
 				character = sourceCode[++p];
 			}
-			while(isdigit(character) and p < (int) sourceCode.length() - 1);
+			while(isdigit(character));
 		}
 		return token_FLOAT;
 	}
-	else if(character == '\"' and p < (int) sourceCode.length() - 2) {
+	else if(character == '\"' and p < (int) sourceCode.length() - 2) { // Aici ar trebui adaugat de fapt un check pentru siruri de
+		// caractere care sa returneze eroare daca e inceput dar nu e terminat
 		int start = p;
 		currentToken += character;
-		while(p < (int) sourceCode.length() - 1) {	
+		while(p < (int) sourceCode.length() - 1) { // Aici s-ar putea face mult mai simplu ca sa nu verifici la
+			// sfarsit din nou
 			character = sourceCode[++p];
 			if(character == '\"') {
 				// check previous escape chars
@@ -226,7 +232,8 @@ int getNextToken() {
 				p++;
 				return token_STRING;
 			}
-			else if(escape % 2 == 1) {
+			else {
+				std::cout << "eroare string\n";
 				return token_UNKNOWN;
 			}
 		}
@@ -247,7 +254,7 @@ int getNextToken() {
 	}
 
 
-	// Keywords (Input, Output, If/Else, Structuri repetitive)
+	// Keywords (Input, Output, Structuri de decizie, Structuri repetitive)
 	{
 		const unsigned int cnt_keywords = 10;
 		unsigned int i;
@@ -268,13 +275,14 @@ int getNextToken() {
 	}
 
 	// Operands
-	if(character == '<' and p < (int) sourceCode.length() - 1) {
+	if(character == '<') { // Asta pare foarte gresit;
+		// Codul "daca x<-y atunci" pare ca produce un token de atribuire dar dupa cum am discutat nu asa va functiona
 		if(sourceCode[p+1] == '-') {
 			currentToken = "<-";
 			p += 2;
 			return token_ASSIGN;
-		} 
-	} 
+		}
+	}
 	switch(character) {
 		case '+':
 			currentToken = character;
@@ -304,7 +312,7 @@ int getNextToken() {
 
 	// Logic
 	if(character == '>') {
-		if(sourceCode[p+1] == '=' and p < (int) sourceCode.length() - 1) {
+		if(sourceCode[p+1] == '=') {
 			currentToken = ">=";
 			p += 2;
 			return token_GREATER_EQUAL;
@@ -314,10 +322,10 @@ int getNextToken() {
 			p++;
 			return token_GREATER;
 		}
-		
+
 	}
 	if(character == '<') {
-		if(sourceCode[p+1] == '=' and p < (int) sourceCode.length() - 1) {
+		if(sourceCode[p+1] == '=') {
 			currentToken = "<=";
 			p += 2;
 			return token_SMALLER_EQUAL;
@@ -343,7 +351,7 @@ int getNextToken() {
 		p++;
 		return token_NOT;
 	}
-	
+
 	if(checkIfToken(sourceCode, p, "si")) {
 		currentToken = "si";
 		p += currentToken.length();
@@ -410,13 +418,13 @@ int getNextToken() {
 	}
 
 	// Identifier
-	
+
 	if(isalpha(character)) {
 		do {
 			currentToken += character;
 			character = sourceCode[++p];
 		}
-		while((isalpha(character) or isdigit(character) or character == '_') and p < (int) sourceCode.length());
+		while(isalpha(character) or isdigit(character) or character == '_');
 		return token_IDENTIFIER;
 	}
 

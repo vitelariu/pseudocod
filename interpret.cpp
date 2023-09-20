@@ -8,7 +8,7 @@ int main(int argc, char **argv) {
 	argc--;
 	if(argc == 0) {
 		/* Interpreteaza direct in terminal */
-		
+
 		std::cout << ">> ";
 		while(getline(std::cin, sourceCode)) {
 			if(sourceCode.length() == 0) {
@@ -24,7 +24,7 @@ int main(int argc, char **argv) {
 
 
 				std::pair<std::string, int> token(currentToken, x);
-					
+
 
 				// token_FORCE_QUIT este un token care este returnat atunci cand
 				//pe linie, ultimul caracter este ' ', '\t'
@@ -35,11 +35,11 @@ int main(int argc, char **argv) {
 			}
 			p = 0;
 			character = ' '; // asta putea fi setat la orice in afara de $
-			
 
-			exprAst *Tree = parseEntry(tokens);
+
+			exprAst *Tree = parse::parseEntry(tokens);
 			interpretEntry(Tree);
-			
+
 			if(Tree->op == numberType) std::cout << Tree->number << '\n';
 			else std::cout << Tree->str << '\n';
 
@@ -61,7 +61,7 @@ int main(int argc, char **argv) {
 				if(sourceCode.length() == 0) continue;
 
 				std::vector<std::pair<std::string, int>> tokens{}; // every token and its type on this line
-																   
+
 
 
 				sourceCode += "$";
@@ -70,7 +70,7 @@ int main(int argc, char **argv) {
 
 
 					std::pair<std::string, int> token(currentToken, x);
-					
+
 
 					// token_FORCE_QUIT este un token care este returnat atunci cand
 					// pe linie, ultimul caracter este ' ', '\t'
@@ -81,11 +81,10 @@ int main(int argc, char **argv) {
 				}
 				p = 0;
 				character = ' '; // asta putea fi setat la orice in afara de $
-						
-					
 
-				parseEntry(tokens);
 
+
+				parse::parseEntry(tokens);
 			}
 
 		}
