@@ -2,9 +2,18 @@
 #include <vector>
 #include <cmath>
 #include <string>
-#include <type_traits>
+#include <sstream>
 #include "lexer.h"
 #include "errors.h"
+
+template <class T>
+T readFromString(const std::string& str)
+{
+	std::stringstream input(str);
+	T x;
+	input >> x;
+	return x;
+}
 
 /// Astea sunt folosite pentru a determina tipul de node din ast-ul de expresii
 enum types {
@@ -136,7 +145,7 @@ class parse {
 	private:
 		exprAst *exp() {
 			if(token.second == token_FLOAT) {
-				double number = std::stod(token.first);
+				double number = readFromString<double>(token.first);
 				exprAst *nodeNumber = new exprAst(number);
 
 				return nodeNumber;

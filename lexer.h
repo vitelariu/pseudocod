@@ -1,7 +1,24 @@
 #include <string>
+#include <sstream>
 
 std::string sourceCode{};
 std::string currentToken{};
+
+template <class T>
+std::string toStdString(T&& x)
+{
+	std::stringstream output;
+	output << x;
+	return output.str();
+}
+
+template <class T>
+std::string toStdString(const T& x)
+{
+	std::stringstream output;
+	output << x;
+	return output.str();
+}
 
 enum tokens {
 	// Keywords [DONE]
@@ -131,7 +148,7 @@ int getNextToken() {
 	if(p < 0 or p >= (int)sourceCode.length())
 	{
 		currentToken = "";
-		throw "getNextToken called with invalid p = " + std::to_string(p) + " when source code length = " + std::to_string(sourceCode.length());
+		throw "getNextToken called with invalid p = " + toStdString(p) + " when source code length = " + toStdString(sourceCode.length());
 	}
 
 	character = sourceCode[p];
@@ -162,7 +179,7 @@ int getNextToken() {
 			identation_cnt += spaces_cnt / 4 + (spaces_cnt % 4 and 1); // formula pentru a
 																	   // transforma spatii in
 																	   // identare
-			currentToken = std::to_string(identation_cnt);
+			currentToken = toStdString(identation_cnt);
 			return token_IDENTATION;
 
 		}
