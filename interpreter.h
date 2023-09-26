@@ -11,58 +11,15 @@ int isComparationTrue{};
 
 /** Functie care returneaza string-ul din ghilimele si size-ul string-ului
  ex: ii dai "a" si iti da a, 1
- chestii precum "\\" se transforma in \, 1
  -1 ca size inseamna eroare
 */
 std::string getString(const std::string& n) {
-	std::string new_str{};
-	for(int i{1}; i < (int) n.length() - 1; i++) {
-		if(n[i] == '\\') {
-			char next = n[++i];
-			switch(next) {
-				case '\\':
-					new_str += '\\';
-					break;
-				case '\"':
-					new_str += '\"';
-					break;
-				case '\'':
-					new_str += '\'';
-					break;
-				case 't':
-					new_str += '\t';
-					break;
-				case '?':
-					new_str += '\?';
-					break;
-				case 'a':
-					new_str += '\a';
-					break;
-				case 'b':
-					new_str += '\b';
-					break;
-				case 'f':
-					new_str += '\f';
-					break;
-				case 'n':
-					new_str += '\n';
-					break;
-				case 'r':
-					new_str += '\r';
-					break;
-				case 'v':
-					new_str += '\v';
-					break;
-				default:
-					break;
-			}
 
-		}
-		else {
-			new_str += n[i];
-		}
-	}
-	return new_str;
+	if(n[0] != '\"' || n.back() !='\"' || n.size()<2u)
+		throw "Invalid string";
+	if(n.size() == 2u)
+		return "";
+	return n.substr(1, n.size()-2u);
 }
 
 /** Returneaza sirul de caractere fara delimitator (""), dar nu verifica inainte
@@ -112,7 +69,7 @@ int getLength(std::string x) { // Pare ca se sterg prea multe caractere, pentru 
 
 std::string multiply_str(std::string x, double number) {
 	if(number != (int) number) {
-		throw "eroare inmultire sir caractere cu numar (neintreg): "+std::to_string(number);
+		throw "eroare inmultire sir caractere cu numar (neintreg): "+toStdString(number);
 	}
 
 	std::string final_str = "\"";

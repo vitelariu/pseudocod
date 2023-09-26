@@ -2,9 +2,18 @@
 #include <vector>
 #include <cmath>
 #include <string>
-#include <type_traits>
+#include <sstream>
 #include "lexer.h"
 #include "errors.h"
+
+template <class T>
+T readFromString(const std::string& str)
+{
+	std::stringstream input(str);
+	T x;
+	input >> x;
+	return x;
+}
 
 /// Astea sunt folosite pentru a determina tipul de node din ast-ul de expresii
 enum types {
@@ -45,14 +54,14 @@ class exprAst {
 		const static int NOT_GATE_FLAG = 2;
 		const static int CMP_BUG_FIX_FLAG = 3;
 
-    public:
+	public:
 		// Dupa numarul de la op ne dam seama ce fel de node este
 		// ex: 0 -> numar (doar cand op-ul este 0, int-ul number este valid)
 		// 1 -> string (doar cand op-ul este 1, string-ul str este valid)
 		// 2 -> plus (se va folosi pointerele de mai jos (exprAst *left/right) pentru a reprezenta nod-urile)
 		// etc etc
-        int op;
-        double number;
+		int op;
+		double number;
 		std::string str;
 
 		// flags
@@ -70,26 +79,26 @@ class exprAst {
 		// rol in fixarea unui bug legat de comparari
 		bool flags[4];
 
-        exprAst *left;
-        exprAst *right;
+		exprAst *left;
+		exprAst *right;
 
-        exprAst() : op(-1), number(0), str(), flags(), left(nullptr), right(nullptr) {}
+		exprAst() : op(-1), number(0), str(), flags(), left(nullptr), right(nullptr) {}
 
-        exprAst(double x) : op(numberType), number(x), str(), flags(), left(nullptr), right(nullptr) {}
+		exprAst(double x) : op(numberType), number(x), str(), flags(), left(nullptr), right(nullptr) {}
 
-        exprAst(std::string x) : op(stringType), number(0), str(x), flags(), left(nullptr), right(nullptr) {}
+		exprAst(std::string x) : op(stringType), number(0), str(x), flags(), left(nullptr), right(nullptr) {}
 
-        exprAst(int Type, exprAst* left, exprAst* right) : op(Type), number(0), str(), flags(), left(left), right(right) {}
+		exprAst(int Type, exprAst* left, exprAst* right) : op(Type), number(0), str(), flags(), left(left), right(right) {}
 
-        virtual ~exprAst()
-        {
-        	delete left;
-        	delete right;
-        }
+		virtual ~exprAst()
+		{
+			delete left;
+			delete right;
+		}
 
-        friend std::ostream& operator<<(std::ostream& out, const exprAst* const ast)
-        {
-        	out << "Op: " << ast->op << '\n';
+		friend std::ostream& operator<<(std::ostream& out, const exprAst* const ast)
+		{
+			out << "Op: " << ast->op << '\n';
 			out << "Number: " << ast->number << "\n\n";
 			if(ast->left != nullptr) {
 				out << ast->left;
@@ -98,7 +107,7 @@ class exprAst {
 				out << ast->right;
 			}
 			return out;
-        }
+		}
 };
 
 /// Clasa pentru transformarea unei liste de tokene intr-un AST. Erorile sunt puse provizoriu si vor fi modificate in viitor
@@ -136,7 +145,7 @@ class parse {
 	private:
 		exprAst *exp() {
 			if(token.second == token_FLOAT) {
-				double number = std::stod(token.first);
+				double number = readFromString<double>(token.first);
 				exprAst *nodeNumber = new exprAst(number);
 
 				return nodeNumber;

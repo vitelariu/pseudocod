@@ -1,7 +1,24 @@
 #include <string>
+#include <sstream>
 
 std::string sourceCode{};
 std::string currentToken{};
+
+template <class T>
+std::string toStdString(T&& x)
+{
+	std::stringstream output;
+	output << x;
+	return output.str();
+}
+
+template <class T>
+std::string toStdString(const T& x)
+{
+	std::stringstream output;
+	output << x;
+	return output.str();
+}
 
 enum tokens {
 	// Keywords [DONE]
@@ -125,13 +142,13 @@ bool checkIfToken(const std::string &code, int start, const std::string& word) {
 Ia urmatorul token si pune-l in currentToken. Modifica variabilele globale 'p', 'character' si 'currentToken'.
 Probabil ar fi o idee buna sa nu mai folosim variabile globale pentru ca pot aparea erori si in cazul ala
 pierzi starea precedenta a variabilelor.
-@return Returneaza tipul de token; Un token este un keyword / cuvant + (un spatiu sau end on line)
+@return Returneaza tipul de token; Un token este un keyword / cuvant + (un spatiu sau end of line)
 */
 int getNextToken() {
 	if(p < 0 or p >= (int)sourceCode.length())
 	{
 		currentToken = "";
-		throw "getNextToken called with invalid p = " + std::to_string(p) + " when source code length = " + std::to_string(sourceCode.length());
+		throw "getNextToken called with invalid p = " + toStdString(p) + " when source code length = " + toStdString(sourceCode.length());
 	}
 
 	character = sourceCode[p];
@@ -162,7 +179,7 @@ int getNextToken() {
 			identation_cnt += spaces_cnt / 4 + (spaces_cnt % 4 and 1); // formula pentru a
 																	   // transforma spatii in
 																	   // identare
-			currentToken = std::to_string(identation_cnt);
+			currentToken = toStdString(identation_cnt);
 			return token_IDENTATION;
 
 		}
@@ -191,55 +208,61 @@ int getNextToken() {
 		}
 		return token_FLOAT;
 	}
-	else if(character == '\"' and p < (int) sourceCode.length() - 2) { // Aici ar trebui adaugat de fapt un check pentru siruri de
-		// caractere care sa returneze eroare daca e inceput dar nu e terminat
+	else if(character == '\"') {
 		int start = p;
-		currentToken += character;
-		while(p < (int) sourceCode.length() - 1) { // Aici s-ar putea face mult mai simplu ca sa nu verifici la
-			// sfarsit din nou
-			character = sourceCode[++p];
-			if(character == '\"') {
-				// check previous escape chars
-				int end = p - 1;
-				int escape{};
-				for(int i = end; i > start; i--) {
-					if(sourceCode[i] == '\\') escape++;
-					else break;
+		bool ended = false;
+
+		std::string string{};
+
+		string += character;
+
+		// Asta e sursa de unde am luat toate escape characters din C++ (fara cele cu numere momentan)
+		// https://en.cppreference.com/w/cpp/language/escape
+		// Lista curenta: \' \" \? \\ \a \b \f \n \r \t \v
+		while(start < (int) sourceCode.length() - 1 && ! ended) {
+			character = sourceCode[++start];
+			if(character == '\\')
+			{
+				char secChar = sourceCode[start + 1];
+				if(secChar == '\'' || secChar == '\"' || secChar == '\\' || secChar == '\?')
+					string += secChar;
+				else if(secChar == 'a')
+					string += '\a';
+				else if(secChar == 'b')
+					string += '\b';
+				else if(secChar == 'f')
+					string += '\f';
+				else if(secChar == 'n')
+					string += '\n';
+				else if(secChar == 'r')
+					string += '\r';
+				else if(secChar == 't')
+					string += '\t';
+				else if(secChar == 'v')
+					string += '\v';
+				else
+				{
+					// Aici se pot face mai multe chestii, in principiu stringul contine caracterul \ urmat de un caracter
+					// nespecial. Putem arunca eroare, sau sa lasam sa mearga fara \ sau sa ignoram ambele caractere.
+					// Momentan se trece peste ambele caractere.
 				}
-				if(escape % 2 == 0) {
-					currentToken += character;
-					p++;
-					return token_STRING;
-				}
-				else if(escape % 2 == 1) {
-					currentToken += character;
-				}
+				++start;
 			}
-			else {
-				currentToken += character;
+			else
+			{
+				string += character;
+				if(character == '\"')
+					ended = true;
 			}
 		}
-		if(character == '\"') {
-			// check previous escape chars
-			int end = p - 1;
-			int escape{};
-			for(int i = end; i > start; i--) {
-				if(sourceCode[i] == '\\') escape++;
-				else break;
-			}
-			if(escape % 2 == 0) {
-				currentToken += character;
-				p++;
-				return token_STRING;
-			}
-			else {
-				std::cout << "eroare string\n";
-				return token_UNKNOWN;
-			}
-		}
-		else {
-			return token_UNKNOWN;
-		}
+
+		if(! ended)
+			throw "Expected \" but not found";
+
+		p = start + 1;
+		currentToken = string;
+
+		return token_STRING;
 	}
 	else if(checkIfToken(sourceCode, p, "Adevarat")) {
 		currentToken = "1";

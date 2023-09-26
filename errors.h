@@ -20,5 +20,5 @@ namespace errors {
 		std::cout << "Sintaxa necunoscuta; Executare nereusita\n";
 		printLine(line, line_number);
 	}
-	
+
 }
