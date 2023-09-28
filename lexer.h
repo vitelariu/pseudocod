@@ -1,6 +1,7 @@
 #include <string>
 
 std::string sourceCode{};
+std::string sourceCode2{}; // sourceCode but without the last '$'
 std::string currentToken{};
 
 enum tokens {
@@ -233,7 +234,6 @@ int getNextToken() {
 				return token_STRING;
 			}
 			else {
-				std::cout << "eroare string\n";
 				return token_UNKNOWN;
 			}
 		}

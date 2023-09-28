@@ -5,7 +5,13 @@
 
 int main(int argc, char **argv) {
 
-	argc--;
+	std::string filename{};
+		argc--;
+
+	if(argc == 1) {
+		filename = argv[1];
+	}
+
 	if(argc == 0) {
 		/* Interpreteaza direct in terminal */
 
@@ -15,6 +21,7 @@ int main(int argc, char **argv) {
 				std::cout << ">> ";
 				continue;
 			}
+			sourceCode2 = sourceCode;
 
 			std::vector<std::pair<std::string, int>> tokens{}; // every token and its type on this line
 
@@ -36,15 +43,32 @@ int main(int argc, char **argv) {
 			p = 0;
 			character = ' '; // asta putea fi setat la orice in afara de $
 
+			exprAst *Tree;
+			try {
+				Tree = parse::parseEntry(tokens);
+				interpretEntry(Tree);
 
-			exprAst *Tree = parse::parseEntry(tokens);
-			interpretEntry(Tree);
+				if(Tree->op == numberType) std::cout << Tree->number << '\n';
+				else std::cout << Tree->str << '\n';
 
-			if(Tree->op == numberType) std::cout << Tree->number << '\n';
-			else std::cout << Tree->str << '\n';
 
-			delete Tree;
-			Tree = nullptr;
+				delete Tree;
+				Tree = nullptr;
+			}
+			catch(errorsTypes n) {
+				switch(n) {
+					case syntaxError:
+						errors::syntax_error(filename, sourceCode2, 0);
+						break;
+					case divisionByZero:
+						errors::division_by_zero(filename, sourceCode2, 0);
+						break;
+				}
+			}
+
+
+
+
 
 			std::cout << ">> ";
 
@@ -53,7 +77,7 @@ int main(int argc, char **argv) {
 	else if(argc == 1) {
 		/* Citeste din fisier, pune in variabila sourceCode (declarara in lexer.h) si interpreteaza */
 
-		std::ifstream sourceFile(argv[1]);
+		std::ifstream sourceFile(filename);
 		if(sourceFile) {
 
 

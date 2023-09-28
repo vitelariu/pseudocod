@@ -101,15 +101,6 @@ bool checkIfChildIsString(exprAst *node) {
 	return node->op == stringType;
 }
 
-int getLength(std::string x) { // Pare ca se sterg prea multe caractere, pentru "\\" da 0 dar ar trebui sa dea 1
-	int raw_l = x.length() - 2;
-	int escape_cnt{};
-	for(int i{}; i < (int) x.length(); i++) {
-		if(x[i] == '\\') escape_cnt++;
-	}
-	return raw_l - escape_cnt;
-}
-
 std::string multiply_str(std::string x, double number) {
 	if(number != (int) number) {
 		throw "eroare inmultire sir caractere cu numar (neintreg): "+std::to_string(number);
@@ -248,8 +239,7 @@ void interpret(exprAst *Tree) {
 
 			Tree->op = numberType;
 			if((Tree->left->op == stringType) ^ (Tree->right->op == stringType)) {
-				std::cout << "eroare123\n";
-				break;
+				throw syntaxError;
 			}
 			else if(Tree->left->op == stringType and Tree->right->op == stringType) {
 				if(getString(Tree->left->str)[0] >= getString(Tree->right->str)[0]) {
@@ -283,8 +273,7 @@ void interpret(exprAst *Tree) {
 
 			Tree->op = numberType;
 			if((Tree->left->op == stringType) ^ (Tree->right->op == stringType)) {
-				std::cout << "eroare123\n";
-				break;
+				throw syntaxError;
 			}
 			else if(Tree->left->op == stringType and Tree->right->op == stringType) {
 				if(getString(Tree->left->str)[0] < getString(Tree->right->str)[0]) {
@@ -319,8 +308,7 @@ void interpret(exprAst *Tree) {
 
 			Tree->op = numberType;
 			if((Tree->left->op == stringType) ^ (Tree->right->op == stringType)) {
-				std::cout << "eroare123\n";
-				break;
+				throw syntaxError;
 			}
 			else if(Tree->left->op == stringType and Tree->right->op == stringType) {
 				if(getString(Tree->left->str)[0] <= getString(Tree->right->str)[0]) {
@@ -353,8 +341,7 @@ void interpret(exprAst *Tree) {
 			Tree->op = numberType;
 
 			if((Tree->left->op == stringType) ^ (Tree->right->op == stringType)) {
-				std::cout << "eroare123\n";
-				break;
+				throw syntaxError;
 			}
 			else if(Tree->left->op == stringType and Tree->right->op == stringType) {
 				if(getString(Tree->left->str) == getString(Tree->right->str)) {
@@ -387,8 +374,7 @@ void interpret(exprAst *Tree) {
 
 			Tree->op = numberType;
 			if((Tree->left->op == stringType) ^ (Tree->right->op == stringType)) {
-				std::cout << "eroare123\n";
-				break;
+				throw syntaxError;
 			}
 			else if(Tree->left->op == stringType and Tree->right->op == stringType) {
 				if(getString(Tree->left->str) != getString(Tree->right->str)) {
@@ -420,9 +406,7 @@ void interpret(exprAst *Tree) {
 			interpret(Tree->right);
 
 			if((Tree->left->op == stringType) ^ (Tree->right->op == stringType)) {
-				// eroare, avem string + numar
-				std::cout << "eroare string + numar\n";
-				break;
+				throw syntaxError;
 			}
 
 			if(Tree->left->op == stringType and Tree->left->op == stringType) {
@@ -468,8 +452,7 @@ void interpret(exprAst *Tree) {
 
 			}
 			else if(Tree->left->op == stringType or Tree->right->op == stringType) {
-				std::cout << "eroare de sintaxa\n";
-				break;
+				throw syntaxError;
 			}
 
 			result = Tree->left->number * Tree->right->number;
@@ -483,7 +466,7 @@ void interpret(exprAst *Tree) {
 			interpret(Tree->left);
 			interpret(Tree->right);
 			if(Tree->right->number == 0) {
-				std::cout << "eroare impartire la 0";
+				throw divisionByZero;
 
 				return;
 			}
@@ -497,8 +480,7 @@ void interpret(exprAst *Tree) {
 			interpret(Tree->left);
 			interpret(Tree->right);
 			if(Tree->left->number != (int) Tree->left->number or Tree->right->number != (int) Tree->right->number or Tree->right->number == 0) {
-				std::cout << "Operatie interzisa\n";
-				break;
+				throw divisionByZero;
 			}
 			result = (int) Tree->left->number % (int) Tree->right->number;
 

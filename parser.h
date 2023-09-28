@@ -45,7 +45,6 @@ class exprAst {
 		const static int NOT_GATE_FLAG = 2;
 		const static int CMP_BUG_FIX_FLAG = 3;
 
-    public:
 		// Dupa numarul de la op ne dam seama ce fel de node este
 		// ex: 0 -> numar (doar cand op-ul este 0, int-ul number este valid)
 		// 1 -> string (doar cand op-ul este 1, string-ul str este valid)
@@ -115,14 +114,13 @@ class parse {
 
 		void match(int type) {
 			if(token.second != type) {
-				std::cout << "eroare match";
+				throw syntaxError;
 			}
 		}
 
 		std::pair<std::string, int> getNextTokenFromVector() {
 			if(index >= (int) tokens.size()) {
-				std::cout << "eroare de sintaxa\n";
-				return token;
+				throw syntaxError;
 			}
 			token = tokens[index];
 			index++;
@@ -133,7 +131,7 @@ class parse {
 
 		parse(const std::vector<std::pair<std::string, int>>& tokens) : tokens(tokens) {}
 
-	private:
+
 		exprAst *exp() {
 			if(token.second == token_FLOAT) {
 				double number = std::stod(token.first);
@@ -202,10 +200,7 @@ class parse {
 			else if(token.second == token_MINUS) {
 				if(index < (int) tokens.size()) {token = getNextTokenFromVector();}
 				else {
-					std::cout << "eroare bitch\n";
-					exprAst *nodeNumber = new exprAst(0);
-					return nodeNumber;
-
+					throw syntaxError;
 				}
 				exprAst *nested = exp();
 				nested->flags[1] = !(nested->flags[1]);
@@ -216,10 +211,7 @@ class parse {
 			else if(token.second == token_PLUS) {
 				if(index < (int) tokens.size()) {token = getNextTokenFromVector();}
 				else {
-					std::cout << "eroare bitch2 de data asta\n";
-					exprAst *nodeNumber = new exprAst(0);
-					return nodeNumber;
-
+					throw syntaxError;
 				}
 				exprAst *nested = exp();
 				token.second = token_FORCE_QUIT;
@@ -229,13 +221,10 @@ class parse {
 			else if(token.second == token_NOT) {
 				if(index < (int) tokens.size()) {token = getNextTokenFromVector();}
 				else {
-					std::cout << "eroare aksdhGF\n";
-					exprAst *nodeNumber = new exprAst(0);
-					return nodeNumber;
-
+					throw syntaxError;
 				}
 				if(token.second != token_LEFT_PARENTH and token.second != token_FLOAT) {
-					std::cout << "eroare frate\n";
+					throw syntaxError;
 				}
 				else {
 					exprAst *nested = exp();
@@ -246,8 +235,7 @@ class parse {
 
 			}
 
-			std::cout << "eroare 99";
-
+			throw syntaxError;
 
 			exprAst *nodeNumber = new exprAst(0);
 			return nodeNumber;
@@ -276,8 +264,7 @@ class parse {
 				}
 				if(token.second == token_RIGHT_PARENTH or token.second == token_RIGHT_SQUARE) op = true;
 				if(!op) {
-					std::cout << "eroare de sintaxa\n";
-					break;
+					throw syntaxError;
 				}
 				if(token.second != token_POWER) break;
 
@@ -288,11 +275,11 @@ class parse {
 						exprTree = new exprAst(powerType, exprTree, exp());
 					}
 					else {
-						std::cout << "error8";
+						throw syntaxError;
 					}
 				}
 				else {
-					std::cout << "error9";
+					throw syntaxError;
 				}
 			}
 
@@ -322,7 +309,7 @@ class parse {
 						exprTree = new exprAst(multiplyType, exprTree, factor());
 					}
 					else {
-						std::cout << "error1";
+						throw syntaxError;
 					}
 				}
 				else if(token.second == token_DIVISION) {
@@ -333,7 +320,7 @@ class parse {
 						//result = result / factor();
 					}
 					else {
-						std::cout << "error2";
+						throw syntaxError;
 					}
 				}
 				else if(token.second == token_MODULO) {
@@ -343,11 +330,11 @@ class parse {
 						exprTree = new exprAst(moduloType, exprTree, factor());
 					}
 					else {
-						std::cout << "error69";
+						throw syntaxError;
 					}
 				}
 				else {
-					std::cout << "error3";
+					throw syntaxError;
 				}
 
 			}
@@ -384,7 +371,7 @@ class parse {
 						exprTree = new exprAst(plusType, exprTree, term());
 					}
 					else {
-						std::cout << "error4.1";
+						throw syntaxError;
 					}
 				}
 				else if(token.second == token_MINUS) {
@@ -398,11 +385,11 @@ class parse {
 						//result = result - term();
 					}
 					else {
-						std::cout << "error aici";
+						throw syntaxError;
 					}
 				}
 				else {
-					std::cout << "error6";
+					throw syntaxError;
 				}
 			}
 
@@ -433,7 +420,7 @@ class parse {
 						exprTree = new exprAst(greaterType, exprTree, addend());
 					}
 					else {
-						std::cout << "error4.2";
+						throw syntaxError;
 					}
 				}
 				else if(token.second == token_GREATER_EQUAL) {
@@ -443,7 +430,7 @@ class parse {
 						exprTree = new exprAst(greaterEqualType, exprTree, addend());
 					}
 					else {
-						std::cout << "error4.3";
+						throw syntaxError;
 					}
 				}
 				else if(token.second == token_SMALLER) {
@@ -453,7 +440,7 @@ class parse {
 						exprTree = new exprAst(smallerType, exprTree, addend());
 					}
 					else {
-						std::cout << "error4.4";
+						throw syntaxError;
 					}
 				}
 				else if(token.second == token_SMALLER_EQUAL) {
@@ -464,7 +451,7 @@ class parse {
 
 					}
 					else {
-						std::cout << "error4.5";
+						throw syntaxError;
 					}
 				}
 				else if(token.second == token_EQUAL) {
@@ -475,7 +462,7 @@ class parse {
 
 					}
 					else {
-						std::cout << "error4.6";
+						throw syntaxError;
 					}
 				}
 				else if(token.second == token_NOT_EQUAL) {
@@ -486,11 +473,11 @@ class parse {
 
 					}
 					else {
-						std::cout << "error4.7";
+						throw syntaxError;
 					}
 				}
 				else {
-					std::cout << "error6";
+					throw syntaxError;
 				}
 			}
 
@@ -521,11 +508,11 @@ class parse {
 						exprTree = new exprAst(andType, exprTree, comp());
 					}
 					else {
-						std::cout << "error4.0";
+						throw syntaxError;
 					}
 				}
 				else {
-					std::cout << "error6";
+					throw syntaxError;
 				}
 			}
 
@@ -566,7 +553,7 @@ class parse {
 					exprTree = new exprAst(orType, exprTree, logic());
 				}
 				else {
-					std::cout << "error9";
+					throw syntaxError;
 				}
 			}
 
@@ -579,7 +566,7 @@ class parse {
 
 
 			if(token.second != token_FLOAT and token.second != token_RIGHT_PARENTH and token.second != token_STRING and token.second != token_RIGHT_SQUARE and token.second != token_FORCE_QUIT) {
-				std::cout << "error7";
+				throw syntaxError;
 			}
 
 			return exprTree;
@@ -591,7 +578,7 @@ class parse {
 
 			if(parenth_cnt != 0 or square_cnt != 0) {
 				delete result;
-				throw "inconsistent brackets\n";
+				throw syntaxError;
 			}
 
 			return result;
