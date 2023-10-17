@@ -80,7 +80,15 @@ std::string getStringRaw(const std::string& n) {
 /// Functie care verifica diferite flag-uri
 void checkFlags(exprAst *Tree, double result) {
 	if(Tree->flags[exprAst::INT_FLAG]) {
-		result = (int) result;
+		if(!Tree->flags[exprAst::INT_BUG_FIX_FLAG]) {
+			if(result >= 0 or (result < 0 and result == (int) result)) {result = (int) result;}
+			else {result = (int) result; result--;}
+		}
+		else {
+			result *= -1;
+			if(result >= 0 or (result < 0 and result == (int) result)) {result = (int) result;}
+			else {result = (int) result; result--;}
+		}
 	}
 	if(Tree->flags[exprAst::NEGATIVE_FLAG]) {
 		result *= -1;
@@ -103,7 +111,7 @@ bool checkIfChildIsString(exprAst *node) {
 
 std::string multiply_str(std::string x, double number) {
 	if(number != (int) number) {
-		throw "eroare inmultire sir caractere cu numar (neintreg): "+std::to_string(number);
+		throw syntaxError;
 	}
 
 	std::string final_str = "\"";
@@ -205,7 +213,7 @@ void interpret(exprAst *Tree) {
 			Tree->op = numberType;
 
 			if((Tree->left->op == stringType) ^ (Tree->right->op == stringType)) {
-				throw "Eroare comparare a unui sir de caractere cu un numar";
+				throw syntaxError;
 			}
 			else if(Tree->left->op == stringType and Tree->right->op == stringType) {
 				if(getString(Tree->left->str)[0] > getString(Tree->right->str)[0]) {
@@ -421,6 +429,7 @@ void interpret(exprAst *Tree) {
 			result = Tree->left->number + Tree->right->number;
 
 			Tree->op = numberType;
+
 			checkFlags(Tree, result);
 			clean(Tree);
 			break;
@@ -431,7 +440,10 @@ void interpret(exprAst *Tree) {
 			result = Tree->left->number - Tree->right->number;
 
 			Tree->op = numberType;
+			
+
 			checkFlags(Tree, result);
+
 			clean(Tree);
 			break;
 
@@ -490,11 +502,18 @@ void interpret(exprAst *Tree) {
 			break;
 
 		case powerType:
+			bool negative = false;
+
 			interpret(Tree->left);
 			interpret(Tree->right);
 			result = pow(Tree->left->number, Tree->right->number);
+			if(Tree->left->flags[exprAst::POW_BUG_FIX_FLAG]) {
+				negative = true;
+			}
 
+			
 			Tree->op = numberType;
+			if(negative) result *= -1;  
 			checkFlags(Tree, result);
 			clean(Tree);
 			break;

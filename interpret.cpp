@@ -6,7 +6,7 @@
 int main(int argc, char **argv) {
 
 	std::string filename{};
-		argc--;
+	argc--;
 
 	if(argc == 1) {
 		filename = argv[1];

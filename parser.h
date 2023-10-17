@@ -44,6 +44,8 @@ class exprAst {
 		const static int NEGATIVE_FLAG = 1;
 		const static int NOT_GATE_FLAG = 2;
 		const static int CMP_BUG_FIX_FLAG = 3;
+		const static int INT_BUG_FIX_FLAG = 4; 
+		const static int POW_BUG_FIX_FLAG = 5;
 
 		// Dupa numarul de la op ne dam seama ce fel de node este
 		// ex: 0 -> numar (doar cand op-ul este 0, int-ul number este valid)
@@ -67,7 +69,13 @@ class exprAst {
 		//
 		// - flags[3]
 		// rol in fixarea unui bug legat de comparari
-		bool flags[4];
+		//
+		// - flags[4]
+		// rol in fixarea unui bug legat de convertirea unui nr real negativ in intreg.
+		//
+		// - flags[5]
+		// rol in fixarea unui bug legat de puteri: -x^y=z in loc de -x^y=-z
+		bool flags[6];
 
         exprAst *left;
         exprAst *right;
@@ -100,7 +108,7 @@ class exprAst {
         }
 };
 
-/// Clasa pentru transformarea unei liste de tokene intr-un AST. Erorile sunt puse provizoriu si vor fi modificate in viitor
+/// Clasa pentru transformarea unei liste de tokene intr-un AST. 
 class parse {
 	private:
 		int index{}; // used for vector
@@ -164,9 +172,10 @@ class parse {
 
 				}
 				exprAst *nested = expr();
+
 				match(token_RIGHT_PARENTH);
 				token.second = token_FORCE_QUIT;
-				nested->flags[3] = true;
+				nested->flags[exprAst::CMP_BUG_FIX_FLAG] = true;
 
 				return nested;
 			}
@@ -192,6 +201,10 @@ class parse {
 				exprAst *nested = expr();
 				nested->flags[0] = true;
 				nested->flags[3] = true;
+				if(nested->flags[exprAst::NEGATIVE_FLAG]) {
+					nested->flags[exprAst::INT_BUG_FIX_FLAG] = true;
+					nested->flags[exprAst::NEGATIVE_FLAG] = false;
+				}
 
 				match(token_RIGHT_SQUARE);
 				token.second = token_FORCE_QUIT;
@@ -202,9 +215,52 @@ class parse {
 				else {
 					throw syntaxError;
 				}
+
+				// while-ul de mai jos e folsit pentru a fixa un bug cand un numar negativ
+				// e inmultit cu putere: -(expr)^y = -1 * (expr)^y
+				int index_copy = index - 1, np_cnt{};
+				bool nextpow{};
+				while(index_copy < (int) tokens.size()) {
+					int searchtk = tokens[index_copy].second;
+					if(searchtk == token_LEFT_PARENTH or searchtk == token_LEFT_SQUARE) {
+						np_cnt++;
+					}
+					else if (searchtk == token_RIGHT_PARENTH or searchtk == token_RIGHT_SQUARE) {
+						np_cnt--;
+						index_copy++;
+						continue;
+
+					}
+
+					if(np_cnt == 0) {
+						if(searchtk != token_FLOAT and searchtk != token_IDENTIFIER) {
+							if(searchtk == token_POWER) {
+								nextpow = true;
+								
+							}
+							break;
+						}
+					}
+
+
+					index_copy++;
+				}
+
+
+
 				exprAst *nested = exp();
-				nested->flags[1] = !(nested->flags[1]);
+				if(nextpow) {
+					nested->flags[exprAst::POW_BUG_FIX_FLAG] = true;
+				}
+				else {
+
+					nested->flags[1] = !(nested->flags[1]);
+				}
 				token.second = token_FORCE_QUIT;
+
+
+
+
 				return nested;
 
 			}
@@ -522,7 +578,7 @@ class parse {
 
 		exprAst *expr() {
 			/*
-			Arithmetic expression parser / interpreter.
+			Arithmetic expression parser.
 
 
 			expr : logic ((OR) logic)*
