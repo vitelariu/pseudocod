@@ -6,6 +6,7 @@
 #include "lexer.h"
 #include "errors.h"
 
+
 /// Astea sunt folosite pentru a determina tipul de node din ast-ul de expresii
 enum types {
 	numberType,
@@ -32,6 +33,11 @@ enum types {
 
 	powerType,
 };
+
+
+
+
+
 
 /** AST = Abstract syntax tree. E o clasa ce reprezinta un arbore binar in care fiecare nod poate
  fi evaluat la o singura valoare, cu proprietatea ca evaluarea radacinii da rezultatul evaluarii
@@ -88,7 +94,7 @@ class exprAst {
 
         exprAst(int Type, exprAst* left, exprAst* right) : op(Type), number(0), str(), flags(), left(left), right(right) {}
 
-        virtual ~exprAst()
+        ~exprAst()
         {
         	delete left;
         	delete right;
@@ -108,8 +114,8 @@ class exprAst {
         }
 };
 
-/// Clasa pentru transformarea unei liste de tokene intr-un AST. 
-class parse {
+/// Clasa pentru transformarea unei liste de tokene intr-un AST expr. 
+class parseExpr {
 	private:
 		int index{}; // used for vector
 
@@ -118,7 +124,6 @@ class parse {
 
 		std::pair<std::string, int> token;
 		std::vector<std::pair<std::string, int>> tokens;
-
 
 		void match(int type) {
 			if(token.second != type) {
@@ -135,9 +140,8 @@ class parse {
 			return token;
 		}
 
-		parse(std::vector<std::pair<std::string, int>>&& tokens) : tokens(std::move(tokens)) {}
-
-		parse(const std::vector<std::pair<std::string, int>>& tokens) : tokens(tokens) {}
+		parseExpr(std::vector<std::pair<std::string, int>>&& tokens) : tokens(std::move(tokens)) {}
+		parseExpr(const std::vector<std::pair<std::string, int>>& tokens) : tokens(tokens) {}
 
 
 		exprAst *exp() {
@@ -328,7 +332,9 @@ class parse {
 					token = getNextTokenFromVector();
 
 					if((token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
-						exprTree = new exprAst(powerType, exprTree, exp());
+						if(exprTree->op == numberType) exprTree = new exprAst(powerType, exprTree, exp());
+						else exprTree->right = new exprAst(powerType, exprTree->right ,exp());
+
 					}
 					else {
 						throw syntaxError;
@@ -373,7 +379,6 @@ class parse {
 
 					if((token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
 						exprTree = new exprAst(divisionType, exprTree, factor());
-						//result = result / factor();
 					}
 					else {
 						throw syntaxError;
@@ -438,7 +443,6 @@ class parse {
 					if((token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
 						exprTree = new exprAst(minusType, exprTree, term());
 
-						//result = result - term();
 					}
 					else {
 						throw syntaxError;
@@ -628,8 +632,8 @@ class parse {
 			return exprTree;
 		}
 
-		/// Punct de inceput conversie tokene in AST. Poate un nume mai bun este convert.
-		exprAst *start() {
+		/// Punct de inceput conversie tokene in expr AST.
+		exprAst *convert() {
 			exprAst *result = expr();
 
 			if(parenth_cnt != 0 or square_cnt != 0) {
@@ -644,7 +648,83 @@ class parse {
 
 		/// Functia principala, converteste expresia la un AST
 		static exprAst *parseEntry(const std::vector<std::pair<std::string, int>>& tokens) {
-			parse Parser(tokens);
-			return Parser.start();
+			parseExpr Parser(tokens);
+			return Parser.convert(); // return type *exprAst
 		}
 };
+
+
+// Urmatoarea clasa reprezinta un Ast de tip scrie
+class outAst {
+	public:
+		// Scrie poate avea o insiruire de expresii legate prin ','
+		
+		std::vector<exprAst*> list_of_exprTree{};
+		
+		void add(exprAst* exprTree) {
+			list_of_exprTree.push_back(exprTree);
+		} 
+		~outAst() {
+			for(int i{}; i < (int) list_of_exprTree.size(); i++) {
+				delete list_of_exprTree[i];
+			}
+		 }
+};
+
+class parseOut {
+	private:
+		int index{};
+		std::pair<std::string, int> token;
+		std::vector<std::pair<std::string, int>> tokens;
+		std::vector<std::pair<std::string, int>> tokensExpr;
+
+		void match(int type) {
+			if(token.second != type) {
+				throw syntaxError;
+			}
+		}
+
+		std::pair<std::string, int> getNextTokenFromVector() {
+			if(index >= (int) tokens.size()) {
+				throw syntaxError;
+			}
+			token = tokens[index];
+			index++;
+			return token;
+		}
+
+
+		parseOut(const std::vector<std::pair<std::string, int>>& tokens) : tokens(tokens) {}
+
+		
+		outAst* convert() {
+			outAst *outputExprs = new outAst;
+			index++;
+
+			while(index < (int) tokens.size()) {
+				token = getNextTokenFromVector();
+
+				if(token.second == token_COMMA) {
+					outputExprs->add(parseExpr::parseEntry(tokensExpr));
+
+					tokensExpr.clear();
+					continue;
+				}
+
+				tokensExpr.push_back(token);
+			}
+			outputExprs->add(parseExpr::parseEntry(tokensExpr));
+			tokensExpr.clear();
+
+			return outputExprs;
+
+		}
+	
+	public:
+		static outAst* parseEntry(const std::vector<std::pair<std::string, int>>& tokens) {
+			parseOut Parser(tokens);
+			return Parser.convert(); // return type outAst
+		}
+
+};
+

@@ -4,6 +4,8 @@
 enum errorsTypes {
 	syntaxError,
 	divisionByZero,
+	invalidFile,
+	tooManyArgs,
 };
 
 
@@ -28,6 +30,12 @@ namespace errors {
 		medium(filename);
 		std::cout << "Impartire la 0 interzisa\n";
 		printLine(line, line_number);
+	}
+	void invalid_file(std::string filename) {
+		std::cout << "Eroare: fisier invalid -> " << filename << '\n';
+	}
+	void too_many_args() {
+		std::cout << "Eroare: se asteapta zero sau un singur argument\n";
 	}
 	
 }
