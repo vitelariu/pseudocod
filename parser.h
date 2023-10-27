@@ -83,8 +83,8 @@ class exprAst {
 		// rol in fixarea unui bug legat de puteri: -x^y=z in loc de -x^y=-z
 		bool flags[6];
 
-        exprAst *left;
-        exprAst *right;
+        exprAst *left{};
+        exprAst *right{};
 
         exprAst() : op(-1), number(0), str(), flags(), left(nullptr), right(nullptr) {}
 
@@ -112,6 +112,7 @@ class exprAst {
 			}
 			return out;
         }
+
 };
 
 /// Clasa pentru transformarea unei liste de tokene intr-un AST expr. 
@@ -332,8 +333,19 @@ class parseExpr {
 					token = getNextTokenFromVector();
 
 					if((token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
-						if(exprTree->op == numberType) exprTree = new exprAst(powerType, exprTree, exp());
-						else exprTree->right = new exprAst(powerType, exprTree->right ,exp());
+						if(exprTree->op == numberType) {exprTree = new exprAst(powerType, exprTree, exp());}
+						else {
+							exprAst *exprTree_copy = exprTree;
+							while(true) {
+								if(exprTree_copy->right->right != nullptr) {
+									exprTree_copy = exprTree_copy->right;
+								}
+								else {
+									break;
+								}
+							} 
+							exprTree_copy->right = new exprAst(powerType, exprTree_copy->right, exp());
+						}
 
 					}
 					else {
@@ -640,7 +652,7 @@ class parseExpr {
 				delete result;
 				throw syntaxError;
 			}
-
+			
 			return result;
 		}
 

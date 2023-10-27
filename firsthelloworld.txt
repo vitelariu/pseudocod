@@ -1,1 +1,0 @@
-scrie "Hello world!"
