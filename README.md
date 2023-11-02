@@ -1,45 +1,70 @@
 # Interpret pseudocod
-Acest program va permite sa rulati pseudocod direct pe calculator.
-Pentru a copia folder-ul:
+Acest program vă permite să rulați pseudocod direct pe calculatorul dvs.
+
+Puteți descărca codul sursă al interpretorului folosind următoarea comandă:
 ```
 git clone https://github.com/vitelariu/pseudocod
 ```
 
-### Linux
-Compilarea interpretului:
+Aveți nevoie doar de [CMake](https://cmake.org/) și de Make, precum și de un
+compilator de C++. Verificați instrucțiunile specifice platformei dvs. pentru a
+instala aceste dependințe.
+
+### Unix
+Pentru a compila interpretorul, navigați în directorul proiectului și rulați:
 
 ```
 ./build.sh
 ```
-Pentru a interpreta un fisier:
-
+Acestea sunt opțiunile disponibile în script (`./build.sh -h`):
 ```
-./interpret {fisier sursa}
+Usage: ./build.sh [options]
+Options:
+  -c, --clean     Clean the build directory before building
+  -v, --verbose   Show additional output
+  -q, --quiet     Suppress all output
+  -h, --help      Show this help message and exit
+Example:
+  ./build.sh --clean --verbose
+```
+Acest script generează un fișier în directorul `build/` numit `build.log`.
+
+Pentru a interpreta un fișier:
+```sh
+./bin/interpret [fisier]
 ```
 
-Pentru a interpreta comenzi direct din terminal:
-
-```
-./interpret
+Se pot interpreta de asemenea și comenzi direct din terminal:
+```sh
+./bin/interpret
 ```
 
 ### Windows
-
-Compilarea interpretului:
-
+Pentru Windows, există o procedură similară, folosind scriptul de Powershell:
 ```
-TODO
+.\build.ps1
 ```
-Pentru a interpreta un fisier:
+Acestea sunt opțiunile disponibile în script (`.\build.ps1 -Help`):
+```
+ Usage: build.ps1 [options]
+ Options:
+   -Clean         Clean the build directory before building
+   -Verbose       Show additional output
+   -Quiet         Suppress all output
+   -Help          Show this help message and exit
+ Example:
+   ./build.ps1 -Clean -Verbose
+```
+Acest script generează un fișier în directorul `build/` numit `build.log`.
 
-```
-/interpret {fisier sursa}
+Pentru a interpreta un fișier:
+```sh
+.\bin\interpret.exe [fisier]
 ```
 
-Pentru a interpreta comenzi direct din terminal:
-
-```
-/interpret
+Se pot interpreta de asemenea și comenzi direct din terminal:
+```sh
+.\bin\interpret.exe
 ```
 
 # Sintaxa

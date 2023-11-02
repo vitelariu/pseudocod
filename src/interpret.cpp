@@ -1,7 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <utility>
-#include "interpreter.h"
+#include "interpreter.hpp"
 
 
 void start(std::vector<std::pair<std::string, int>>& tokens, bool inTerminal) {

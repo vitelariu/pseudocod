@@ -3,8 +3,8 @@
 #include <cmath>
 #include <string>
 #include <type_traits>
-#include "lexer.h"
-#include "errors.h"
+#include "lexer.hpp"
+#include "errors.hpp"
 
 
 // Un struct pentru variabile si un ubnordered map unde se vor
