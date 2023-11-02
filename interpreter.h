@@ -1,6 +1,8 @@
 #include <iostream>
 #include <cmath>
+#include <unordered_map>
 #include "parser.h"
+
 
 
 // 0 - not used
@@ -106,9 +108,7 @@ namespace interpretExpr {
 		Tree->number = result;
 	}
 
-	bool checkIfChildIsString(exprAst *node) {
-		return node->op == stringType;
-	}
+
 
 	std::string multiply_str(std::string x, double number) {
 		if(number != (int) number) {
@@ -560,5 +560,53 @@ namespace interpretOut {
 
 
 
+	}
+}
+
+namespace interpretVar {
+
+
+	void interpretEntry(varNode *node) {
+		// Prima data interpreteaza expresia care va fi atribuita variabilei
+		interpretExpr::interpretEntry(node->expr);
+		var variabile{};
+
+		if(node->expr->op == numberType) {
+			variabile.type = numberType;
+			variabile.numberValue = node->expr->number;
+		}
+		else {
+			variabile.type = stringType;
+			variabile.stringValue = node->expr->str;
+		}
+
+		variables[node->varName] = variabile;
+	
+	}
+}
+
+namespace interpretIn {
+	void interpretEntry(inAst *Tree) {
+		for(int i{}; i < (int) Tree->list_of_identifiers.size(); i++) {
+			std::string name = Tree->list_of_identifiers[i];
+			var variable;
+			
+			std::string xstr{};
+			double xdou{};
+
+			if(Tree->type == token_ASSIGN_FLOAT) {
+				std::cin >> xdou;
+				variable.type = numberType;
+				variable.numberValue = xdou;
+			}
+			else {
+				std::getline(std::cin, xstr);
+				variable.type = stringType;
+				variable.stringValue = '"' + xstr + '"';
+
+			}
+
+			variables[name] = variable;
+		}
 	}
 }

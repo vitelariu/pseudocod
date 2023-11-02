@@ -13,6 +13,38 @@ void start(std::vector<std::pair<std::string, int>>& tokens, bool inTerminal) {
 			if(inTerminal) std::cout << '\n';
 			break;
 		}
+		case token_IDENTIFIER:
+		{
+			bool assign = false;
+			if(tokens.size() > 1 and tokens[1].second == token_ASSIGN) assign = true;
+
+			if(assign) {
+				varNode *node = parseVar::parseEntry(tokens);
+				interpretVar::interpretEntry(node);
+			}
+			else {
+				exprAst *Tree = parseExpr::parseEntry(tokens);
+				interpretExpr::interpretEntry(Tree);
+	
+				if(inTerminal) {
+					if(Tree->op == numberType) std::cout << Tree->number;
+					else std::cout << Tree->str;
+					std::cout << '\n';
+				}
+
+				delete Tree;
+				Tree = nullptr;
+			}
+
+			break;
+		}
+		case token_INPUT:
+		{
+			inAst *Tree = parseIn::parseEntry(tokens);
+			interpretIn::interpretEntry(Tree);
+
+			break;
+		}
 		default:
 		{
 			exprAst *Tree = parseExpr::parseEntry(tokens);
@@ -32,6 +64,7 @@ void start(std::vector<std::pair<std::string, int>>& tokens, bool inTerminal) {
 }
 
 
+
 int main(int argc, char **argv) {
 	std::string filename{};
 	argc--;
@@ -40,20 +73,85 @@ int main(int argc, char **argv) {
 	}
 
 	int line_number{1};
-	try {
 
-		if(argc == 0) {
-			/* Interpreteaza direct in terminal */
+
+	if(argc == 0) {
+		/* Interpreteaza direct in terminal */
+
+		std::cout << ">> ";
+		while(getline(std::cin, sourceCode)) {
+			if(sourceCode.length() == 0) {
+				std::cout << ">> ";
+				continue;
+			}
+			sourceCode2 = sourceCode;
+
+			std::vector<std::pair<std::string, int>> tokens{}; // every token and its type on this line
+
+			sourceCode += "$";
+			while(character != '$' and p < (int) sourceCode.length() - 1) {
+				int x = getNextToken();
+
+
+				std::pair<std::string, int> token(currentToken, x);
+
+
+				// token_FORCE_QUIT este un token care este returnat atunci cand
+				//pe linie, ultimul caracter este ' ', '\t'
+				// Acesta trebuie ignorat
+				if(x != token_FORCE_QUIT) {
+					tokens.push_back(token);
+				}
+			}
+			p = 0;
+			character = ' '; // asta putea fi setat la orice in afara de $
+			
+			try {
+				start(tokens, true);
+			}
+			catch(errorsTypes n) {
+				switch(n) {
+					case syntaxError:
+						errors::syntax_error(filename, sourceCode2, line_number);
+						break;
+					case divisionByZero:
+						errors::division_by_zero(filename, sourceCode2, line_number);
+						break;
+					case invalidFile:
+						errors::invalid_file(filename);
+						break;
+					case tooManyArgs:
+						errors::too_many_args();
+						break;
+					case uninitialisedVar:
+						errors::uninitialised_var(filename, sourceCode2, line_number);
+						break;
+				}
+			}
+
+
 
 			std::cout << ">> ";
-			while(getline(std::cin, sourceCode)) {
+
+		}
+	}
+	else if(argc == 1) {
+		/* Citeste din fisier, pune in variabila sourceCode (declarara in lexer.h) si interpreteaza */
+
+		std::ifstream sourceFile(filename);
+		if(sourceFile) {
+
+
+			while(getline(sourceFile, sourceCode)) {
 				if(sourceCode.length() == 0) {
-					std::cout << ">> ";
+					line_number++;
 					continue;
 				}
 				sourceCode2 = sourceCode;
 
 				std::vector<std::pair<std::string, int>> tokens{}; // every token and its type on this line
+
+
 
 				sourceCode += "$";
 				while(character != '$' and p < (int) sourceCode.length() - 1) {
@@ -64,7 +162,7 @@ int main(int argc, char **argv) {
 
 
 					// token_FORCE_QUIT este un token care este returnat atunci cand
-					//pe linie, ultimul caracter este ' ', '\t'
+					// pe linie, ultimul caracter este ' ', '\t'
 					// Acesta trebuie ignorat
 					if(x != token_FORCE_QUIT) {
 						tokens.push_back(token);
@@ -73,78 +171,47 @@ int main(int argc, char **argv) {
 				p = 0;
 				character = ' '; // asta putea fi setat la orice in afara de $
 
-				start(tokens, true);
-
-
-				std::cout << ">> ";
-
-			}
-		}
-		else if(argc == 1) {
-			/* Citeste din fisier, pune in variabila sourceCode (declarara in lexer.h) si interpreteaza */
-
-			std::ifstream sourceFile(filename);
-			if(sourceFile) {
-
-
-				while(getline(sourceFile, sourceCode)) {
-					if(sourceCode.length() == 0) continue;
-					sourceCode2 = sourceCode;
-
-					std::vector<std::pair<std::string, int>> tokens{}; // every token and its type on this line
-
-
-
-					sourceCode += "$";
-					while(character != '$' and p < (int) sourceCode.length() - 1) {
-						int x = getNextToken();
-
-
-						std::pair<std::string, int> token(currentToken, x);
-
-
-						// token_FORCE_QUIT este un token care este returnat atunci cand
-						// pe linie, ultimul caracter este ' ', '\t'
-						// Acesta trebuie ignorat
-						if(x != token_FORCE_QUIT) {
-							tokens.push_back(token);
-						}
-					}
-					p = 0;
-					character = ' '; // asta putea fi setat la orice in afara de $
-
+				try {
 					start(tokens, false);
-					line_number++;
+				}
+				catch(errorsTypes n) {
+					switch(n) {
+						case syntaxError:
+							errors::syntax_error(filename, sourceCode2, line_number);
+							break;
+						case divisionByZero:
+							errors::division_by_zero(filename, sourceCode2, line_number);
+							break;
+						case invalidFile:
+							errors::invalid_file(filename);
+							break;
+						case tooManyArgs:
+							errors::too_many_args();
+							break;
+						case uninitialisedVar:
+							errors::uninitialised_var(filename, sourceCode2, line_number);
+							break;
+					}
+				}
 
-				}		
 
-			}
-			else {
-				throw invalidFile;
-			}
+
+				line_number++;
+
+			}		
 
 		}
 		else {
-			throw tooManyArgs;
+			throw invalidFile;
 		}
 
-		return 0;
 	}
-	catch(errorsTypes n) {
-		switch(n) {
-			case syntaxError:
-				errors::syntax_error(filename, sourceCode2, line_number);
-				break;
-			case divisionByZero:
-				errors::division_by_zero(filename, sourceCode2, line_number);
-				break;
-			case invalidFile:
-				errors::invalid_file(filename);
-				break;
-			case tooManyArgs:
-				errors::too_many_args();
-				break;
-		}
+	else {
+		throw tooManyArgs;
 	}
+
+	
+
+	return 0;
 }
 

@@ -6,6 +6,7 @@ enum errorsTypes {
 	divisionByZero,
 	invalidFile,
 	tooManyArgs,
+	uninitialisedVar,
 };
 
 
@@ -36,6 +37,11 @@ namespace errors {
 	}
 	void too_many_args() {
 		std::cout << "Eroare: se asteapta zero sau un singur argument\n";
+	}
+	void uninitialised_var(std::string filename, std::string line, int line_number) {
+		medium(filename);
+		std::cout << "Variabila neinitializata\n";
+		printLine(line, line_number);
 	}
 	
 }

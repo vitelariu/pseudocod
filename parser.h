@@ -7,7 +7,21 @@
 #include "errors.h"
 
 
+// Un struct pentru variabile si un ubnordered map unde se vor
+// tine variabilele
+struct var {
+	int type{};
+	double numberValue{};
+	std::string stringValue{};	
+};
+// std::string nume, var variabila
+std::unordered_map<std::string, var> variables{};
+
+
+
+
 /// Astea sunt folosite pentru a determina tipul de node din ast-ul de expresii
+/// De asemenea se mai folosesc si pentru class varNode
 enum types {
 	numberType,
 	stringType,
@@ -132,17 +146,24 @@ class parseExpr {
 			}
 		}
 
-		std::pair<std::string, int> getNextTokenFromVector() {
+		void getNextTokenFromVector() {
 			if(index >= (int) tokens.size()) {
 				throw syntaxError;
 			}
 			token = tokens[index];
 			index++;
-			return token;
+		}
+
+		bool isvarNumber(std::pair<std::string, int> token) {
+			return token.second == token_IDENTIFIER and variables.find(token.first) != variables.end() and variables[token.first].type == numberType;
+		}
+		bool isvarString(std::pair<std::string, int> token) {
+			return token.second == token_IDENTIFIER and variables.find(token.first) != variables.end() and variables[token.first].type == stringType;
 		}
 
 		parseExpr(std::vector<std::pair<std::string, int>>&& tokens) : tokens(std::move(tokens)) {}
 		parseExpr(const std::vector<std::pair<std::string, int>>& tokens) : tokens(tokens) {}
+
 
 
 		exprAst *exp() {
@@ -151,6 +172,21 @@ class parseExpr {
 				exprAst *nodeNumber = new exprAst(number);
 
 				return nodeNumber;
+			}
+			else if(token.second == token_IDENTIFIER) {
+				if(variables.find(token.first) == variables.end()) throw uninitialisedVar;
+				if(variables[token.first].type == numberType) {
+					double number = variables[token.first].numberValue;
+					exprAst *nodeNumber = new exprAst(number);
+
+					return nodeNumber;
+				}
+				else {
+					std::string str = variables[token.first].stringValue;
+					exprAst *nodeString = new exprAst(str);
+
+					return nodeString;
+				}
 			}
 			else if(token.second == token_STRING) {
 				std::string str = token.first;
@@ -161,7 +197,7 @@ class parseExpr {
 			else if(token.second == token_LEFT_PARENTH) {
 
 				if(tokens[index].second == token_RIGHT_PARENTH) {
-					token = getNextTokenFromVector();
+					getNextTokenFromVector();
 					token.second = token_FORCE_QUIT;
 
 					exprAst *nodeNumber = new exprAst(0);
@@ -187,7 +223,7 @@ class parseExpr {
 			else if(token.second == token_LEFT_SQUARE) {
 
 				if(tokens[index].second == token_RIGHT_SQUARE) {
-					token = getNextTokenFromVector();
+					getNextTokenFromVector();
 					token.second = token_FORCE_QUIT;
 
 					exprAst *nodeNumber = new exprAst(0);
@@ -216,7 +252,7 @@ class parseExpr {
 				return nested;
 			}
 			else if(token.second == token_MINUS) {
-				if(index < (int) tokens.size()) {token = getNextTokenFromVector();}
+				if(index < (int) tokens.size()) {getNextTokenFromVector();}
 				else {
 					throw syntaxError;
 				}
@@ -270,7 +306,7 @@ class parseExpr {
 
 			}
 			else if(token.second == token_PLUS) {
-				if(index < (int) tokens.size()) {token = getNextTokenFromVector();}
+				if(index < (int) tokens.size()) {getNextTokenFromVector();}
 				else {
 					throw syntaxError;
 				}
@@ -280,7 +316,7 @@ class parseExpr {
 
 			}
 			else if(token.second == token_NOT) {
-				if(index < (int) tokens.size()) {token = getNextTokenFromVector();}
+				if(index < (int) tokens.size()) {getNextTokenFromVector();}
 				else {
 					throw syntaxError;
 				}
@@ -314,7 +350,7 @@ class parseExpr {
 					break;
 				}
 
-				token = getNextTokenFromVector();
+				getNextTokenFromVector();
 
 				bool op = false;
 				for(int i = token_PLUS; i <= token_OR; i++) {
@@ -330,9 +366,9 @@ class parseExpr {
 				if(token.second != token_POWER) break;
 
 				if(token.second == token_POWER) {
-					token = getNextTokenFromVector();
+					getNextTokenFromVector();
 
-					if((token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
+					if((isvarNumber(token) or token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
 						if(exprTree->op == numberType) {exprTree = new exprAst(powerType, exprTree, exp());}
 						else {
 							exprAst *exprTree_copy = exprTree;
@@ -377,9 +413,9 @@ class parseExpr {
 				if(token.second != token_ASTERISK and token.second != token_DIVISION and token.second != token_MODULO) break;
 
 				if(token.second == token_ASTERISK) {
-					token = getNextTokenFromVector();
+					getNextTokenFromVector();
 
-					if(token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT or token.second == token_STRING) {
+					if(isvarNumber(token) or token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT or token.second == token_STRING) {
 						exprTree = new exprAst(multiplyType, exprTree, factor());
 					}
 					else {
@@ -387,9 +423,9 @@ class parseExpr {
 					}
 				}
 				else if(token.second == token_DIVISION) {
-					token = getNextTokenFromVector();
+					getNextTokenFromVector();
 
-					if((token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
+					if((isvarNumber(token) or token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
 						exprTree = new exprAst(divisionType, exprTree, factor());
 					}
 					else {
@@ -397,9 +433,9 @@ class parseExpr {
 					}
 				}
 				else if(token.second == token_MODULO) {
-					token = getNextTokenFromVector();
+					getNextTokenFromVector();
 
-					if((token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
+					if((isvarNumber(token) or token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
 						exprTree = new exprAst(moduloType, exprTree, factor());
 					}
 					else {
@@ -432,15 +468,15 @@ class parseExpr {
 				if(token.second != token_PLUS and token.second != token_MINUS) break;
 
 				if(token.second == token_PLUS) {
-					token = getNextTokenFromVector();
+					getNextTokenFromVector();
 
 
 
-					if((token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
+					if((isvarNumber(token) or token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
 						exprTree = new exprAst(plusType, exprTree, term());
 
 					}
-					else if((token.second == token_STRING or token.second == token_LEFT_PARENTH) or result->op == stringType) {
+					else if((isvarString(token) or token.second == token_STRING or token.second == token_LEFT_PARENTH) or result->op == stringType) {
 						exprTree = new exprAst(plusType, exprTree, term());
 					}
 					else {
@@ -448,11 +484,11 @@ class parseExpr {
 					}
 				}
 				else if(token.second == token_MINUS) {
-					token = getNextTokenFromVector();
+					getNextTokenFromVector();
 
 
 
-					if((token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
+					if((isvarNumber(token) or token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
 						exprTree = new exprAst(minusType, exprTree, term());
 
 					}
@@ -486,9 +522,9 @@ class parseExpr {
 				if(token.second != token_GREATER and token.second != token_GREATER_EQUAL and token.second != token_SMALLER and token.second != token_SMALLER_EQUAL and token.second != token_EQUAL and token.second != token_NOT_EQUAL) break;
 
 				if(token.second == token_GREATER) {
-					token = getNextTokenFromVector();
+					getNextTokenFromVector();
 
-					if(token.second == token_FLOAT or token.second == token_STRING or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) {
+					if(isvarNumber(token) or token.second == token_FLOAT or token.second == token_STRING or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) {
 						exprTree = new exprAst(greaterType, exprTree, addend());
 					}
 					else {
@@ -496,9 +532,9 @@ class parseExpr {
 					}
 				}
 				else if(token.second == token_GREATER_EQUAL) {
-					token = getNextTokenFromVector();
+					getNextTokenFromVector();
 
-					if(token.second == token_FLOAT or token.second == token_STRING or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) {
+					if(isvarNumber(token) or token.second == token_FLOAT or token.second == token_STRING or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) {
 						exprTree = new exprAst(greaterEqualType, exprTree, addend());
 					}
 					else {
@@ -506,9 +542,9 @@ class parseExpr {
 					}
 				}
 				else if(token.second == token_SMALLER) {
-					token = getNextTokenFromVector();
+					getNextTokenFromVector();
 
-					if(token.second == token_FLOAT or token.second == token_STRING or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) {
+					if(isvarNumber(token) or token.second == token_FLOAT or token.second == token_STRING or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) {
 						exprTree = new exprAst(smallerType, exprTree, addend());
 					}
 					else {
@@ -516,9 +552,9 @@ class parseExpr {
 					}
 				}
 				else if(token.second == token_SMALLER_EQUAL) {
-					token = getNextTokenFromVector();
+					getNextTokenFromVector();
 
-					if(token.second == token_FLOAT or token.second == token_STRING or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) {
+					if(isvarNumber(token) or token.second == token_FLOAT or token.second == token_STRING or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) {
 						exprTree = new exprAst(smallerEqualType, exprTree, addend());
 
 					}
@@ -527,9 +563,9 @@ class parseExpr {
 					}
 				}
 				else if(token.second == token_EQUAL) {
-					token = getNextTokenFromVector();
+					getNextTokenFromVector();
 
-					if(token.second == token_FLOAT or token.second == token_STRING or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) {
+					if(isvarNumber(token) or token.second == token_FLOAT or token.second == token_STRING or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) {
 						exprTree = new exprAst(equalType, exprTree, addend());
 
 					}
@@ -538,9 +574,9 @@ class parseExpr {
 					}
 				}
 				else if(token.second == token_NOT_EQUAL) {
-					token = getNextTokenFromVector();
+					getNextTokenFromVector();
 
-					if(token.second == token_FLOAT or token.second == token_STRING or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) {
+					if(isvarNumber(token) or token.second == token_FLOAT or token.second == token_STRING or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) {
 						exprTree = new exprAst(notEqualType, exprTree, addend());
 
 					}
@@ -574,9 +610,9 @@ class parseExpr {
 				if(token.second != token_AND) break;
 
 				if(token.second == token_AND) {
-					token = getNextTokenFromVector();
+					getNextTokenFromVector();
 
-					if((token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
+					if((isvarNumber(token) or token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
 						exprTree = new exprAst(andType, exprTree, comp());
 					}
 					else {
@@ -621,7 +657,7 @@ class parseExpr {
 
 				getNextTokenFromVector();
 
-				if((token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
+				if((isvarNumber(token) or token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
 					exprTree = new exprAst(orType, exprTree, logic());
 				}
 				else {
@@ -637,7 +673,7 @@ class parseExpr {
 			}
 
 
-			if(token.second != token_FLOAT and token.second != token_RIGHT_PARENTH and token.second != token_STRING and token.second != token_RIGHT_SQUARE and token.second != token_FORCE_QUIT) {
+			if(token.second != token_IDENTIFIER and token.second != token_FLOAT and token.second != token_RIGHT_PARENTH and token.second != token_STRING and token.second != token_RIGHT_SQUARE and token.second != token_FORCE_QUIT) {
 				throw syntaxError;
 			}
 
@@ -661,7 +697,7 @@ class parseExpr {
 		/// Functia principala, converteste expresia la un AST
 		static exprAst *parseEntry(const std::vector<std::pair<std::string, int>>& tokens) {
 			parseExpr Parser(tokens);
-			return Parser.convert(); // return type *exprAst
+			return Parser.convert();
 		}
 };
 
@@ -696,25 +732,24 @@ class parseOut {
 			}
 		}
 
-		std::pair<std::string, int> getNextTokenFromVector() {
+		void getNextTokenFromVector() {
 			if(index >= (int) tokens.size()) {
 				throw syntaxError;
 			}
 			token = tokens[index];
 			index++;
-			return token;
 		}
 
-
+		parseOut(std::vector<std::pair<std::string, int>>&& tokens) : tokens(std::move(tokens)) {}
 		parseOut(const std::vector<std::pair<std::string, int>>& tokens) : tokens(tokens) {}
 
 		
 		outAst* convert() {
-			outAst *outputExprs = new outAst;
+			outAst *outputExprs = new outAst; 
 			index++;
 
 			while(index < (int) tokens.size()) {
-				token = getNextTokenFromVector();
+				getNextTokenFromVector();
 
 				if(token.second == token_COMMA) {
 					outputExprs->add(parseExpr::parseEntry(tokensExpr));
@@ -735,8 +770,160 @@ class parseOut {
 	public:
 		static outAst* parseEntry(const std::vector<std::pair<std::string, int>>& tokens) {
 			parseOut Parser(tokens);
-			return Parser.convert(); // return type outAst
+			return Parser.convert();
 		}
 
 };
 
+
+// Urmatoarea clasa reprezinta o variabila
+class varNode {
+	public:
+		std::string varName{};
+
+
+		// tokens vector for expression (this will be evaluated)	
+		std::vector<std::pair<std::string, int>> expr_for_var;
+		// Pointer to exprAst for evaluating the value
+		exprAst *expr{};
+
+		~varNode() {
+			delete expr;
+		}
+};
+
+
+class parseVar {
+	int index{};
+	std::pair<std::string, int> token;
+	std::vector<std::pair<std::string, int>> tokens;
+
+	void match(int type) {
+		if(token.second != type) {
+			throw syntaxError;
+		}
+	}
+
+	void getNextTokenFromVector() {
+		if(index >= (int) tokens.size()) {
+			throw syntaxError;
+		}
+		token = tokens[index];
+		index++;
+	}
+
+	parseVar(std::vector<std::pair<std::string, int>>&& tokens) : tokens(std::move(tokens)) {}
+	parseVar(const std::vector<std::pair<std::string, int>>& tokens) : tokens(tokens) {}
+
+
+	varNode *convert() {
+		varNode *node = new varNode;
+		getNextTokenFromVector();
+		
+		node->varName = token.first;
+		getNextTokenFromVector();
+		match(token_ASSIGN);
+
+
+		
+
+		for(int i{2}; i < (int) tokens.size(); i++) {
+			(node->expr_for_var).push_back(tokens[i]);
+		}
+		
+		node->expr = parseExpr::parseEntry(node->expr_for_var);
+
+		return node;
+	}
+	
+	public:
+		static varNode* parseEntry(const std::vector<std::pair<std::string, int>>& tokens) {
+			parseVar Parser(tokens);
+			return Parser.convert();
+		}
+};
+
+
+
+class inAst {
+	public:
+		int type{token_ASSIGN_FLOAT};
+		std::vector<std::string> list_of_identifiers{};
+
+		void add(std::string name) {
+			list_of_identifiers.push_back(name);
+		}
+};
+
+class parseIn {
+	int index{};
+	std::pair<std::string, int> token;
+	std::vector<std::pair<std::string, int>> tokens;
+
+	void match(int type) {
+		if(token.second != type) {
+			throw syntaxError;
+		}
+	}
+
+	void getNextTokenFromVector() {
+		if(index >= (int) tokens.size()) {
+			throw syntaxError;
+		}
+		token = tokens[index];
+		index++;
+	}
+
+
+	parseIn(std::vector<std::pair<std::string, int>>&& tokens) : tokens(std::move(tokens)) {}
+	parseIn(const std::vector<std::pair<std::string, int>>& tokens) : tokens(tokens) {}
+
+
+
+	inAst *convert() {
+		inAst* Tree = new inAst;
+
+		getNextTokenFromVector();
+		match(token_INPUT);
+
+		getNextTokenFromVector();
+		if(token.second == token_IDENTIFIER) Tree->add(token.first);
+		else throw syntaxError;
+		if(index < (int) tokens.size()) {
+			getNextTokenFromVector();
+			while(true) {
+				if(index == (int) tokens.size()) {
+					if(token.second == token_ASSIGN_FLOAT) {
+						Tree->type = token_ASSIGN_FLOAT;
+						break;
+					}
+					else if(token.second == token_ASSIGN_STRING) {
+						Tree->type = token_ASSIGN_STRING;
+						break;
+					}
+					else {throw syntaxError;}
+				}
+				
+				if(token.second != token_COMMA) throw syntaxError;
+				getNextTokenFromVector();
+				if(token.second == token_IDENTIFIER) Tree->add(token.first);
+				else throw syntaxError;
+
+				if(index < (int) tokens.size()) {
+					getNextTokenFromVector();
+				}
+				else {
+					break;
+				}
+			}
+		}
+
+		return Tree;
+	}
+
+	public:
+		static inAst* parseEntry(const std::vector<std::pair<std::string, int>>& tokens) {
+			parseIn Parser(tokens);
+			return Parser.convert();
+		}
+};

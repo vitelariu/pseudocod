@@ -24,6 +24,8 @@ enum tokens {
 	// Data types when reading [DONE]
 	// spre exemplu citeste x (numar natural, nenul)
 	// citeste x,y,z (numere reale)
+	//
+	// Trebuie sterse astea in afara de token_ASSIGN_FLOAT si token_ASSIGN_STRING
 	token_ASSIGN_NATURAL,
 	token_ASSIGN_nonzeroNATURAL,
 	token_ASSIGN_INT,
