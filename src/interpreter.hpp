@@ -1,6 +1,7 @@
 #include <iostream>
 #include <cmath>
 #include <unordered_map>
+#include <limits>
 #include "parser.hpp"
 
 
@@ -583,7 +584,7 @@ namespace interpretOut {
 		for(int i{}; i < (int) Tree->list_of_exprTree.size(); i++) {
 			interpretExpr::interpretEntry(Tree->list_of_exprTree[i]);
 			
-			if(Tree->list_of_exprTree[i]->op == numberType) {std::cout << Tree->list_of_exprTree[i]->number;}
+			if(Tree->list_of_exprTree[i]->op == numberType) {std::cout << Tree->list_of_exprTree[i]->number; }
 			else {
 				std::string rez = Tree->list_of_exprTree[i]->str;
 				rez = getString(rez); 
@@ -638,6 +639,8 @@ namespace interpretIn {
 				variable.numberValue = xdou;
 			}
 			else {
+				std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // clean the buffer
+
 				std::getline(std::cin, xstr);
 				variable.type = stringType;
 				variable.stringValue = '"' + xstr + '"';
