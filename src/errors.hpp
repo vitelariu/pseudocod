@@ -12,6 +12,7 @@ enum errorsTypes {
 
 namespace errors {
 	void medium(std::string filename) {
+		std::cout << '\n';
 		if(filename == "") {
 			std::cout << "Terminal: eroare -> ";
 		}

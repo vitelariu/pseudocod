@@ -10,7 +10,7 @@
 // Un struct pentru variabile si un ubnordered map unde se vor
 // tine variabilele
 struct var {
-	int type{};
+	int type{-1};
 	double numberValue{};
 	std::string stringValue{};	
 };
@@ -25,6 +25,8 @@ std::unordered_map<std::string, var> variables{};
 enum types {
 	numberType,
 	stringType,
+	unknownType, // Type that has a special use (it means that cand be either numberType or stringType)
+	varType,
 
 	orType,
 
@@ -49,8 +51,10 @@ enum types {
 };
 
 
-
-
+class variable {
+	public:
+		std::string name{};
+};
 
 
 /** AST = Abstract syntax tree. E o clasa ce reprezinta un arbore binar in care fiecare nod poate
@@ -75,6 +79,7 @@ class exprAst {
         int op;
         double number;
 		std::string str;
+		variable var;
 
 		// flags
 		// - flags[0]
@@ -100,13 +105,15 @@ class exprAst {
         exprAst *left{};
         exprAst *right{};
 
-        exprAst() : op(-1), number(0), str(), flags(), left(nullptr), right(nullptr) {}
+        exprAst() : op(-1), number(0), str(), var(), flags(), left(nullptr), right(nullptr) {}
 
-        exprAst(double x) : op(numberType), number(x), str(), flags(), left(nullptr), right(nullptr) {}
+        exprAst(double x) : op(numberType), number(x), str(), var(), flags(),  left(nullptr), right(nullptr) {}
 
-        exprAst(std::string x) : op(stringType), number(0), str(x), flags(), left(nullptr), right(nullptr) {}
+        exprAst(std::string x) : op(stringType), number(0), str(x), var(), flags(), left(nullptr), right(nullptr) {}
 
-        exprAst(int Type, exprAst* left, exprAst* right) : op(Type), number(0), str(), flags(), left(left), right(right) {}
+        exprAst(int Type, exprAst* left, exprAst* right) : op(Type), number(0), str(), var(), flags(), left(left), right(right) {}
+		
+		exprAst(variable x) : op(varType), number(), str(), var(x), flags(), left(nullptr), right(nullptr) {} 
 
         ~exprAst()
         {
@@ -154,13 +161,6 @@ class parseExpr {
 			index++;
 		}
 
-		bool isvarNumber(std::pair<std::string, int> token) {
-			return token.second == token_IDENTIFIER and variables.find(token.first) != variables.end() and variables[token.first].type == numberType;
-		}
-		bool isvarString(std::pair<std::string, int> token) {
-			return token.second == token_IDENTIFIER and variables.find(token.first) != variables.end() and variables[token.first].type == stringType;
-		}
-
 		parseExpr(std::vector<std::pair<std::string, int>>&& tokens) : tokens(std::move(tokens)) {}
 		parseExpr(const std::vector<std::pair<std::string, int>>& tokens) : tokens(tokens) {}
 
@@ -174,19 +174,16 @@ class parseExpr {
 				return nodeNumber;
 			}
 			else if(token.second == token_IDENTIFIER) {
-				if(variables.find(token.first) == variables.end()) throw uninitialisedVar;
-				if(variables[token.first].type == numberType) {
-					double number = variables[token.first].numberValue;
-					exprAst *nodeNumber = new exprAst(number);
-
-					return nodeNumber;
+				var Var = variables[token.first];
+				if(Var.type == -1) {
+					// Asta inseamna ca nici macar nu exista aceasta variabila si este folosita intr-o expr;
+					throw uninitialisedVar;
 				}
-				else {
-					std::string str = variables[token.first].stringValue;
-					exprAst *nodeString = new exprAst(str);
 
-					return nodeString;
-				}
+				variable name;
+				name.name = token.first;
+				exprAst *nodeVar = new exprAst(name); 
+				return nodeVar;
 			}
 			else if(token.second == token_STRING) {
 				std::string str = token.first;
@@ -368,7 +365,7 @@ class parseExpr {
 				if(token.second == token_POWER) {
 					getNextTokenFromVector();
 
-					if((isvarNumber(token) or token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
+					if((token.second == token_IDENTIFIER or token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
 						if(exprTree->op == numberType) {exprTree = new exprAst(powerType, exprTree, exp());}
 						else {
 							exprAst *exprTree_copy = exprTree;
@@ -415,7 +412,7 @@ class parseExpr {
 				if(token.second == token_ASTERISK) {
 					getNextTokenFromVector();
 
-					if(isvarNumber(token) or token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT or token.second == token_STRING) {
+					if(token.second == token_IDENTIFIER or token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT or token.second == token_STRING) {
 						exprTree = new exprAst(multiplyType, exprTree, factor());
 					}
 					else {
@@ -425,7 +422,7 @@ class parseExpr {
 				else if(token.second == token_DIVISION) {
 					getNextTokenFromVector();
 
-					if((isvarNumber(token) or token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
+					if((token.second == token_IDENTIFIER or token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
 						exprTree = new exprAst(divisionType, exprTree, factor());
 					}
 					else {
@@ -435,7 +432,7 @@ class parseExpr {
 				else if(token.second == token_MODULO) {
 					getNextTokenFromVector();
 
-					if((isvarNumber(token) or token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
+					if((token.second == token_IDENTIFIER or token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
 						exprTree = new exprAst(moduloType, exprTree, factor());
 					}
 					else {
@@ -472,11 +469,11 @@ class parseExpr {
 
 
 
-					if((isvarNumber(token) or token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
+					if((token.second == token_IDENTIFIER or token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
 						exprTree = new exprAst(plusType, exprTree, term());
 
 					}
-					else if((isvarString(token) or token.second == token_STRING or token.second == token_LEFT_PARENTH) or result->op == stringType) {
+					else if((token.second == token_IDENTIFIER  or token.second == token_STRING or token.second == token_LEFT_PARENTH) or result->op == stringType) {
 						exprTree = new exprAst(plusType, exprTree, term());
 					}
 					else {
@@ -488,7 +485,7 @@ class parseExpr {
 
 
 
-					if((isvarNumber(token) or token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
+					if((token.second == token_IDENTIFIER or token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
 						exprTree = new exprAst(minusType, exprTree, term());
 
 					}
@@ -524,7 +521,7 @@ class parseExpr {
 				if(token.second == token_GREATER) {
 					getNextTokenFromVector();
 
-					if(isvarNumber(token) or token.second == token_FLOAT or token.second == token_STRING or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) {
+					if(token.second == token_IDENTIFIER  or token.second == token_FLOAT or token.second == token_STRING or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) {
 						exprTree = new exprAst(greaterType, exprTree, addend());
 					}
 					else {
@@ -534,7 +531,7 @@ class parseExpr {
 				else if(token.second == token_GREATER_EQUAL) {
 					getNextTokenFromVector();
 
-					if(isvarNumber(token) or token.second == token_FLOAT or token.second == token_STRING or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) {
+					if(token.second == token_IDENTIFIER  or token.second == token_FLOAT or token.second == token_STRING or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) {
 						exprTree = new exprAst(greaterEqualType, exprTree, addend());
 					}
 					else {
@@ -544,7 +541,7 @@ class parseExpr {
 				else if(token.second == token_SMALLER) {
 					getNextTokenFromVector();
 
-					if(isvarNumber(token) or token.second == token_FLOAT or token.second == token_STRING or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) {
+					if(token.second == token_IDENTIFIER  or token.second == token_FLOAT or token.second == token_STRING or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) {
 						exprTree = new exprAst(smallerType, exprTree, addend());
 					}
 					else {
@@ -554,7 +551,7 @@ class parseExpr {
 				else if(token.second == token_SMALLER_EQUAL) {
 					getNextTokenFromVector();
 
-					if(isvarNumber(token) or token.second == token_FLOAT or token.second == token_STRING or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) {
+					if(token.second == token_IDENTIFIER  or token.second == token_FLOAT or token.second == token_STRING or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) {
 						exprTree = new exprAst(smallerEqualType, exprTree, addend());
 
 					}
@@ -565,7 +562,7 @@ class parseExpr {
 				else if(token.second == token_EQUAL) {
 					getNextTokenFromVector();
 
-					if(isvarNumber(token) or token.second == token_FLOAT or token.second == token_STRING or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) {
+					if(token.second == token_IDENTIFIER  or token.second == token_FLOAT or token.second == token_STRING or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) {
 						exprTree = new exprAst(equalType, exprTree, addend());
 
 					}
@@ -576,7 +573,7 @@ class parseExpr {
 				else if(token.second == token_NOT_EQUAL) {
 					getNextTokenFromVector();
 
-					if(isvarNumber(token) or token.second == token_FLOAT or token.second == token_STRING or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) {
+					if(token.second == token_IDENTIFIER  or token.second == token_FLOAT or token.second == token_STRING or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) {
 						exprTree = new exprAst(notEqualType, exprTree, addend());
 
 					}
@@ -612,7 +609,7 @@ class parseExpr {
 				if(token.second == token_AND) {
 					getNextTokenFromVector();
 
-					if((isvarNumber(token) or token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
+					if((token.second == token_IDENTIFIER  or token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
 						exprTree = new exprAst(andType, exprTree, comp());
 					}
 					else {
@@ -657,7 +654,7 @@ class parseExpr {
 
 				getNextTokenFromVector();
 
-				if((isvarNumber(token) or token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
+				if((token.second == token_IDENTIFIER  or token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
 					exprTree = new exprAst(orType, exprTree, logic());
 				}
 				else {
@@ -821,6 +818,13 @@ class parseVar {
 		getNextTokenFromVector();
 		
 		node->varName = token.first;
+		var variable;
+
+		// Nu am cum sa stiu daca expr va fi stringType sau numberType pana nu o execut asa a folosesc unknwonType
+		variable.type = unknownType;
+		variables[node->varName] = variable;
+
+
 		getNextTokenFromVector();
 		match(token_ASSIGN);
 
@@ -918,6 +922,17 @@ class parseIn {
 			}
 		}
 
+
+		for(std::string id : Tree->list_of_identifiers) {
+			var variable;
+
+			// pot de fapt sa determin daca e stringType sau numberType dar nu am nevoie oricum asa ca folosesc unkownType
+			variable.type = unknownType;
+
+			variables[id] = variable;
+		}
+
+
 		return Tree;
 	}
 
@@ -927,3 +942,50 @@ class parseIn {
 			return Parser.convert();
 		}
 };
+
+
+
+
+
+
+class statement {
+	public:	
+		// practic astea is toate pointerele de care ai nevoie pentru a construi
+		// tree-ul
+
+
+		exprAst* exprAst_p{};
+		outAst* outAst_p{};
+		varNode* varNode_p{};
+		inAst* inAst_p{};
+};
+
+
+
+class statements {
+	public:
+		std::vector<statement*> s{};
+		void add(statement* st) {
+			s.push_back(st);
+		}
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

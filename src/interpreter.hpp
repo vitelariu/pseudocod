@@ -155,7 +155,24 @@ namespace interpretExpr {
 		else if(Tree->op == stringType) {
 			return;
 		}
+		else if(Tree->op == varType) {
+			var Var = variables[(Tree->var).name];
 
+			if(Var.type == numberType) {
+				double numFromVar = (variables[(Tree->var).name]).numberValue;
+				checkFlags(Tree, numFromVar);
+				Tree->op = numberType;
+			}
+			else {
+				std::string strFromVar = (variables[(Tree->var).name]).stringValue;
+				Tree->str = strFromVar;
+				Tree->op = stringType;
+
+			}
+
+			return;
+		}
+ 
 		double result{};
 
 
@@ -164,6 +181,7 @@ namespace interpretExpr {
 
 				interpret(Tree->left);
 				aux(Tree->left);
+
 
 				// Chestia asta poate scapa de sub control, asa ca o sa facem o mica optimizare
 				// interpret(Tree->right);
@@ -175,6 +193,7 @@ namespace interpretExpr {
 				{
 					interpret(Tree->right);
 					aux(Tree->right);
+					if(Tree->left->op == stringType or Tree->right->op == stringType) throw syntaxError; 
 
 					result = (bool) Tree->right->number;
 				}
@@ -197,6 +216,8 @@ namespace interpretExpr {
 					interpret(Tree->right);
 					aux(Tree->right);
 
+					if(Tree->left->op == stringType or Tree->right->op == stringType) throw syntaxError; 
+
 					result = (bool) Tree->right->number;
 				}
 				else
@@ -213,11 +234,12 @@ namespace interpretExpr {
 
 				Tree->op = numberType;
 
+
 				if((Tree->left->op == stringType) ^ (Tree->right->op == stringType)) {
 					throw syntaxError;
 				}
 				else if(Tree->left->op == stringType and Tree->right->op == stringType) {
-					if(getString(Tree->left->str)[0] > getString(Tree->right->str)[0]) {
+					if(getString(Tree->left->str).compare(getString(Tree->right->str)) > 0) {
 						checkFlags(Tree, 1);
 					}
 					else {
@@ -251,7 +273,7 @@ namespace interpretExpr {
 					throw syntaxError;
 				}
 				else if(Tree->left->op == stringType and Tree->right->op == stringType) {
-					if(getString(Tree->left->str)[0] >= getString(Tree->right->str)[0]) {
+					if(getString(Tree->left->str).compare(getString(Tree->right->str)) >= 0) {
 						checkFlags(Tree, 1);
 					}
 					else {
@@ -285,7 +307,7 @@ namespace interpretExpr {
 					throw syntaxError;
 				}
 				else if(Tree->left->op == stringType and Tree->right->op == stringType) {
-					if(getString(Tree->left->str)[0] < getString(Tree->right->str)[0]) {
+					if(getString(Tree->left->str).compare(getString(Tree->right->str)) < 0) {
 						checkFlags(Tree, 1);
 					}
 					else {
@@ -320,7 +342,7 @@ namespace interpretExpr {
 					throw syntaxError;
 				}
 				else if(Tree->left->op == stringType and Tree->right->op == stringType) {
-					if(getString(Tree->left->str)[0] <= getString(Tree->right->str)[0]) {
+					if(getString(Tree->left->str).compare(getString(Tree->right->str)) <= 0) {
 						checkFlags(Tree, 1);
 					}
 					else {
@@ -353,7 +375,7 @@ namespace interpretExpr {
 					throw syntaxError;
 				}
 				else if(Tree->left->op == stringType and Tree->right->op == stringType) {
-					if(getString(Tree->left->str) == getString(Tree->right->str)) {
+					if(getString(Tree->left->str).compare(getString(Tree->right->str)) == 0) {
 						checkFlags(Tree, 1);
 					}
 					else {
@@ -386,7 +408,7 @@ namespace interpretExpr {
 					throw syntaxError;
 				}
 				else if(Tree->left->op == stringType and Tree->right->op == stringType) {
-					if(getString(Tree->left->str) != getString(Tree->right->str)) {
+					if(getString(Tree->left->str).compare(getString(Tree->right->str)) != 0) {
 						checkFlags(Tree, 1);
 					}
 					else {
@@ -438,6 +460,10 @@ namespace interpretExpr {
 			case minusType:
 				interpret(Tree->left);
 				interpret(Tree->right);
+
+
+				if(Tree->left->op == stringType or Tree->right->op == stringType) throw syntaxError; 
+
 				result = Tree->left->number - Tree->right->number;
 
 				Tree->op = numberType;
@@ -478,6 +504,10 @@ namespace interpretExpr {
 			case divisionType:
 				interpret(Tree->left);
 				interpret(Tree->right);
+
+
+				if(Tree->left->op == stringType or Tree->right->op == stringType) throw syntaxError; 
+
 				if(Tree->right->number == 0) {
 					throw divisionByZero;
 
@@ -492,7 +522,12 @@ namespace interpretExpr {
 			case moduloType:
 				interpret(Tree->left);
 				interpret(Tree->right);
-				if(Tree->left->number != (int) Tree->left->number or Tree->right->number != (int) Tree->right->number or Tree->right->number == 0) {
+
+				if(Tree->left->op == stringType or Tree->right->op == stringType) throw syntaxError; 
+				if(Tree->left->number != (int) Tree->left->number or Tree->right->number != (int) Tree->right->number) {
+					throw syntaxError;
+				}
+				else if(Tree->right->number == 0) {
 					throw divisionByZero;
 				}
 				result = (int) Tree->left->number % (int) Tree->right->number;
@@ -507,6 +542,9 @@ namespace interpretExpr {
 
 				interpret(Tree->left);
 				interpret(Tree->right);
+
+				if(Tree->left->op == stringType or Tree->right->op == stringType) throw syntaxError; 
+
 				result = pow(Tree->left->number, Tree->right->number);
 				if(Tree->left->flags[exprAst::POW_BUG_FIX_FLAG]) {
 					negative = true;
