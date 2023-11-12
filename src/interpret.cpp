@@ -259,7 +259,7 @@ int main(int argc, char **argv) {
 
 				// Sfarsitul parsuirii filei
 				// Timpul sa executam tree-ul pe care l-am creat (variabila Statements este tot tree-ul)
-
+				
 				execute(Statements, false);
 
 			}

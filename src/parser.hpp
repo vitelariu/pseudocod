@@ -366,7 +366,7 @@ class parseExpr {
 					getNextTokenFromVector();
 
 					if((token.second == token_IDENTIFIER or token.second == token_FLOAT or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) and result->op != stringType) {
-						if(exprTree->op == numberType) {exprTree = new exprAst(powerType, exprTree, exp());}
+						if(exprTree->op == numberType or exprTree->op == varType) {exprTree = new exprAst(powerType, exprTree, exp());}
 						else {
 							exprAst *exprTree_copy = exprTree;
 							while(true) {
