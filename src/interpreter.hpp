@@ -639,7 +639,6 @@ namespace interpretIn {
 				variable.numberValue = xdou;
 			}
 			else {
-				std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // clean the buffer
 
 				std::getline(std::cin, xstr);
 				variable.type = stringType;
@@ -648,6 +647,10 @@ namespace interpretIn {
 			}
 
 			variables[name] = variable;
+		}
+
+		if(Tree->type == token_ASSIGN_FLOAT) {
+			std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // clean the buffer
 		}
 	}
 }
