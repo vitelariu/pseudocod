@@ -114,18 +114,18 @@ class ProgramBlocks {
 
 
 		void add_line(statement *Statement, int identation_number) {
-			if(identation_number > Blocks.size() - 1) throw syntaxError;
+			if(identation_number > (int) Blocks.size() - 1) throw syntaxError;
 			
 			Blocks[identation_number]->add(Statement); // am adaugat in Blocks
 
 
 			// verificam daca fiecare statements din Blocks de la identation_number + 1 in sus
 			// are cel putin un statement inainte de a le sterge
-			for(int i = identation_number + 1; i < Blocks.size(); i++) {
+			for(int i = identation_number + 1; i < (int) Blocks.size(); i++) {
 				if(Blocks[i]->s.size() == 0) throw syntaxError;
 			}
 
-			if(identation_number < Blocks.size() - 1) Blocks.erase(Blocks.begin() + identation_number + 1, Blocks.end());
+			if(identation_number < (int) Blocks.size() - 1) Blocks.erase(Blocks.begin() + identation_number + 1, Blocks.end());
 
 		}
 
