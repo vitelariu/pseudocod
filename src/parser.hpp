@@ -123,6 +123,7 @@ class exprAst {
 
         friend std::ostream& operator<<(std::ostream& out, const exprAst* const ast)
         {
+			if(!ast) out << "TREE-UL DAT NU E VALID\n";
         	out << "Op: " << ast->op << '\n';
 			out << "Number: " << ast->number << "\n\n";
 			if(ast->left != nullptr) {
@@ -142,7 +143,7 @@ class parseExpr {
 		int index{}; // used for vector
 
 		// must be 0 after execution
-		int parenth_cnt{}, square_cnt{};
+		int parenth_cnt{}, square_cnt{}, vertical_bar_cnt{};
 
 		std::pair<std::string, int> token;
 		std::vector<std::pair<std::string, int>> tokens;
@@ -193,6 +194,7 @@ class parseExpr {
 			}
 			else if(token.second == token_LEFT_PARENTH) {
 
+				// daca urmatorul token din lista este )
 				if(tokens[index].second == token_RIGHT_PARENTH) {
 					getNextTokenFromVector();
 					token.second = token_FORCE_QUIT;
@@ -218,7 +220,8 @@ class parseExpr {
 				return nested;
 			}
 			else if(token.second == token_LEFT_SQUARE) {
-
+				
+				// daca urmatorul token din lista este ]
 				if(tokens[index].second == token_RIGHT_SQUARE) {
 					getNextTokenFromVector();
 					token.second = token_FORCE_QUIT;
@@ -254,7 +257,7 @@ class parseExpr {
 					throw syntaxError;
 				}
 
-				// while-ul de mai jos e folsit pentru a fixa un bug cand un numar negativ
+				// while-ul de mai jos e folosit pentru a fixa un bug cand un numar negativ
 				// e inmultit cu putere: -(expr)^y = -1 * (expr)^y
 				int index_copy = index - 1, np_cnt{};
 				bool nextpow{};
@@ -740,7 +743,6 @@ class parseOut {
 		parseOut(std::vector<std::pair<std::string, int>>&& tokens) : tokens(std::move(tokens)) {}
 		parseOut(const std::vector<std::pair<std::string, int>>& tokens) : tokens(tokens) {}
 
-		
 		outAst* convert() {
 			outAst *outputExprs = new outAst; 
 			index++;
@@ -760,10 +762,12 @@ class parseOut {
 			outputExprs->add(parseExpr::parseEntry(tokensExpr));
 			tokensExpr.clear();
 
+			
+
 			return outputExprs;
 
 		}
-	
+
 	public:
 		static outAst* parseEntry(const std::vector<std::pair<std::string, int>>& tokens) {
 			parseOut Parser(tokens);
@@ -779,13 +783,15 @@ class varNode {
 		std::string varName{};
 
 
-		// tokens vector for expression (this will be evaluated)	
+		// tokens vector prentru expr (this will be evaluated)	
+		// nu era necesar sincer chestia asta acum ca ma gandesc
+		// dar e deja facut asa si merge deci ¯\_(¬‿¬)_/¯
 		std::vector<std::pair<std::string, int>> expr_for_var;
 		// Pointer to exprAst for evaluating the value
 		exprAst *expr{};
 
 		~varNode() {
-			delete expr;
+			if(expr) delete expr;
 		}
 };
 
@@ -812,7 +818,6 @@ class parseVar {
 	parseVar(std::vector<std::pair<std::string, int>>&& tokens) : tokens(std::move(tokens)) {}
 	parseVar(const std::vector<std::pair<std::string, int>>& tokens) : tokens(tokens) {}
 
-
 	varNode *convert() {
 		varNode *node = new varNode;
 		getNextTokenFromVector();
@@ -837,9 +842,11 @@ class parseVar {
 		
 		node->expr = parseExpr::parseEntry(node->expr_for_var);
 
+
 		return node;
 	}
-	
+
+
 	public:
 		static varNode* parseEntry(const std::vector<std::pair<std::string, int>>& tokens) {
 			parseVar Parser(tokens);
@@ -883,9 +890,8 @@ class parseIn {
 	parseIn(const std::vector<std::pair<std::string, int>>& tokens) : tokens(tokens) {}
 
 
-
 	inAst *convert() {
-		inAst* Tree = new inAst;
+		inAst *Tree = new inAst;
 
 		getNextTokenFromVector();
 		match(token_INPUT);
@@ -903,6 +909,18 @@ class parseIn {
 					}
 					else if(token.second == token_ASSIGN_STRING) {
 						Tree->type = token_ASSIGN_STRING;
+						break;
+					}
+					else if(token.second == token_ASSIGN_NATURAL) {
+						Tree->type = token_ASSIGN_NATURAL;
+						break;
+					}
+					else if(token.second == token_ASSIGN_INT) {
+						Tree->type = token_ASSIGN_INT;
+						break;
+					}
+					else if(token.second == token_ASSIGN_BOOL) {
+						Tree->type = token_ASSIGN_BOOL;
 						break;
 					}
 					else {throw syntaxError;}
@@ -945,7 +963,12 @@ class parseIn {
 
 
 
-
+class whileAst; // forward declaration
+				// asta e folosit de statement dar in acelasi timp
+				// clasa asta poate sa foloseasca indirect clasa statement
+				// (prin clasa statements)
+				//
+				// ex: statements: statement -> whileAst -> statements
 
 
 class statement {
@@ -954,10 +977,19 @@ class statement {
 		// tree-ul
 
 
-		exprAst* exprAst_p{};
-		outAst* outAst_p{};
-		varNode* varNode_p{};
-		inAst* inAst_p{};
+		exprAst *exprAst_p{};
+		outAst *outAst_p{};
+		varNode *varNode_p{};
+		inAst *inAst_p{};
+		whileAst *whileAst_p{};
+
+
+		~statement() {
+			if(exprAst_p) delete exprAst_p;
+			if(outAst_p) delete outAst_p;
+			if(varNode_p) delete varNode_p;
+			if(inAst_p) delete inAst_p;
+		}
 };
 
 
@@ -967,6 +999,71 @@ class statements {
 		std::vector<statement*> s{};
 		void add(statement* st) {
 			s.push_back(st);
+		}
+};
+
+class whileAst {
+	public:
+		exprAst *condition = new exprAst;
+		statements *block = new statements;
+
+		~whileAst() {
+			delete condition;
+			delete block;
+		}
+};
+
+class parseWhile {
+	int index{};
+	std::pair<std::string, int> token;
+	std::vector<std::pair<std::string, int>> tokens;
+	std::vector<std::pair<std::string, int>> tokensCondition;
+
+	void match(int type) {
+		if(token.second != type) {
+			throw syntaxError;
+		}
+
+	}
+
+	void getNextTokenFromVector() {
+		if(index >= (int) tokens.size()) {
+			throw syntaxError;
+		}
+		token = tokens[index];
+		index++;
+	}
+
+
+	parseWhile(std::vector<std::pair<std::string, int>>&& tokens) : tokens(std::move(tokens)) {}
+	parseWhile(const std::vector<std::pair<std::string, int>>& tokens) : tokens(tokens) {}
+
+
+	whileAst *convert() {
+		whileAst *Tree = new whileAst;
+		
+		getNextTokenFromVector();
+		match(token_WHILE);
+		
+		
+		// de aici ar trebui sa fie o expr pentru conditie
+		// si la sfarsit cuvantul "executa"
+		while(index < (int) tokens.size() - 1) {
+			getNextTokenFromVector();
+			tokensCondition.push_back(token);
+		}
+		getNextTokenFromVector();
+		if(token.second != token_EXECUTE) throw forgotExecute;
+		
+		Tree->condition = parseExpr::parseEntry(tokensCondition);
+		
+		return Tree;
+	}
+
+	public:
+		static whileAst *parseEntry(const std::vector<std::pair<std::string, int>>& tokens) {
+			parseWhile Parser(tokens);
+			return Parser.convert();
 		}
 };
 
@@ -982,10 +1079,66 @@ class statements {
 
 
 
+// Functii auxiliare de care am nevoie pentru arbori
 
 
+// nu se copie intreg tree-ul, ci doar exprAst din el
+// (doar alea se modifica in execute)
+namespace CopyTree {
+	
+	void copy_exprAst(exprAst *OriginalTree, exprAst *NewTree) {
+		if(OriginalTree->left) {
+			NewTree->left = new exprAst(*OriginalTree->left);
+			copy_exprAst(OriginalTree->left, NewTree->left);
+		}	
+		if(OriginalTree->right) {
+			NewTree->right = new exprAst(*OriginalTree->right);
+			copy_exprAst(OriginalTree->right, NewTree->right);
+		}
+	}
+
+	void copy_exprAst2(exprAst *OriginalTree, exprAst *NewTree) {
+		copy_exprAst(OriginalTree, NewTree);
+	}
+
+		
+	// [arborele original din care se copie] [noul arbore]
+	void Entry(statements *OriginalTree, statements *NewTree) {
 
 
+		for(int i{}; i < (int) OriginalTree->s.size(); i++) {
+			// Luam fiecare tip in parte si apelam la copyExprAst
+			
 
+			if(OriginalTree->s[i]->exprAst_p) {
 
+				exprAst *expr = new exprAst(*OriginalTree->s[i]->exprAst_p);
+				CopyTree::copy_exprAst(OriginalTree->s[i]->exprAst_p, expr);
+				statement *line = new statement(*OriginalTree->s[i]);
+				line->exprAst_p = expr;
+				NewTree->s[i] = line;
+			}
+			else if(OriginalTree->s[i]->varNode_p) {
 
+				exprAst *expr = new exprAst(*OriginalTree->s[i]->varNode_p->expr);
+				CopyTree::copy_exprAst(OriginalTree->s[i]->varNode_p->expr, expr);
+				varNode *asignare = new varNode(*OriginalTree->s[i]->varNode_p);
+				asignare->expr = expr;
+				statement *line = new statement(*OriginalTree->s[i]);
+				line->varNode_p = asignare;
+				NewTree->s[i] = line;
+			}
+			else if(OriginalTree->s[i]->outAst_p) {
+				outAst *out = new outAst();
+				for(exprAst *OriginalExpr : OriginalTree->s[i]->outAst_p->list_of_exprTree) {
+					exprAst *expr = new exprAst(*OriginalExpr);
+					CopyTree::copy_exprAst(OriginalExpr, expr);
+					out->add(expr);
+				}
+				statement *line = new statement(*OriginalTree->s[i]);
+				line->outAst_p = out;
+				NewTree->s[i] = line;
+			}
+		}
+	}
+}

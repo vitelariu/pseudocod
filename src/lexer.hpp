@@ -25,7 +25,6 @@ enum tokens {
 	// spre exemplu citeste x (numar natural, nenul)
 	// citeste x,y,z (numere reale)
 	//
-	// Trebuie sterse astea in afara de token_ASSIGN_FLOAT si token_ASSIGN_STRING
 	token_ASSIGN_NATURAL,
 	token_ASSIGN_nonzeroNATURAL,
 	token_ASSIGN_INT,
@@ -61,11 +60,15 @@ enum tokens {
 	token_RIGHT_PARENTH,
 	token_LEFT_SQUARE,
 	token_RIGHT_SQUARE,
+	token_VERTICAL_BAR,
 
 	// Others
 	token_IDENTIFIER,
 	token_IDENTATION,
 	token_UNKNOWN,
+	token_COMMENT_LINE,
+	token_COMMENT_OPEN,
+	token_COMMENT_CLOSE,
 	token_FORCE_QUIT
 };
 
@@ -87,7 +90,7 @@ bool checkNextCharacterDifferentToken(const std::string &code, int i) {
 	if(nextCharacter == ' ' || nextCharacter == '\n' || nextCharacter == '\t')
 		return true;
 
-	// cuvantul e urmat de marcator sfarsit de linie (se poate scoate daca nu mai mergem pe ideea asta)
+	// cuvantul e urmat de marcator sfarsit de linie
 	if(nextCharacter == '$' and i == (int) code.length() - 1)
 		return true;
 
@@ -124,6 +127,45 @@ bool checkIfToken(const std::string &code, int start, const std::string& word) {
 	return poate_fi && checkNextCharacterDifferentToken(code, start + i);
 }
 
+
+// functie auxialara, aceeasi ca si cea de sus, dar nu tine cont de singurul spatiu dintre cuvinte
+// bun pentru tokene de genul "cat timp", care ar trebui sa se poata scrie si asa "cat    timp"
+bool checkIfTokenSpecial(const std::string &code, int start, const std::string& word, int &sum) {
+	int i{}, diff{};
+	bool poate_fi = true;
+
+	bool first_word = false;
+	bool blocked = false;
+
+	// verifica daca toate caracterele sunt egale
+	for(i = 0; i - diff < (int) word.length() && poate_fi && (start + i < (int) code.length()); ++i) {
+		if(code[start + i] == ' ' or code[start + i] == '\t') {
+			if(blocked) {return false;}
+			else {
+				if(first_word) diff++;
+				first_word = true;
+				sum++;
+				continue;
+			}
+		}
+		else {
+			if(first_word) {// if-ul de mai sus a fost activat de mai multe ori la rand
+						   // acum ca nu mai este spatiu il vom "bloca"
+				blocked = true;
+			}
+		}
+		sum++;
+		
+
+		if(word[i - diff] != code[start + i]) {
+			poate_fi=false;
+		}
+	}
+	// daca toate caracterele sunt egale, verificam daca tockenul s-a terminat
+	return poate_fi && checkNextCharacterDifferentToken(code, start + i);
+
+}
+
 /**
 Ia urmatorul token si pune-l in currentToken. Modifica variabilele globale 'p', 'character' si 'currentToken'.
 Probabil ar fi o idee buna sa nu mai folosim variabile globale pentru ca pot aparea erori si in cazul ala
@@ -134,7 +176,7 @@ int getNextToken() {
 	if(p < 0 or p >= (int)sourceCode.length())
 	{
 		currentToken = "";
-		throw "getNextToken called with invalid p = " + std::to_string(p) + " when source code length = " + std::to_string(sourceCode.length());
+		// acest if n-ar trebui teoretic sa fie activat vreodata
 	}
 
 	character = sourceCode[p];
@@ -144,10 +186,13 @@ int getNextToken() {
 	if(character == ' ' or character == '\t') {
 		if(p == 0) {
 			// Numara identarea (este la inceputul liniei)
-			// 1 / 2 / 3 / 4 spatii inseamna o identare
+			// 4 spatii inseamna o identare
 			// 1 tab inseamna o identare
-			// Exemplu: un spatiu + un tab + un spatiu = 2 identarii
+			// Exemplu: 4 spatii + un tab = 2 identarii
 			// (in total ai un tab si 2 spatii)
+			//
+			// 1 tab = o idendare
+			// 4 spatii = o identare
 			//
 			// Token-ul returnat va fi token_IDENTATION indiferent de numarul de identari
 			// Numarul de identari este pus in currentToken
@@ -162,14 +207,21 @@ int getNextToken() {
 			while((character == ' ' or character == '\t'));
 
 			identation_cnt += tabs_cnt; // tab-uri sunt echivalente cu identarea
-			identation_cnt += spaces_cnt / 4 + (spaces_cnt % 4 and 1); // formula pentru a
-																	   // transforma spatii in
-																	   // identare
+			
+			// vrem ca spaces_cnt sa fie divizibil cu 4 pentru a putea fi considerat o identare (altfel va fi token_UNKNOWN)
+			if(spaces_cnt % 4 == 0) {
+				identation_cnt += spaces_cnt / 4;
+			}
+			else {
+				return token_UNKNOWN;
+			}
+
 			currentToken = std::to_string(identation_cnt);
 			return token_IDENTATION;
 
 		}
-		else { // Ce a vrut sa spuna autorul aici?
+		else { // daca nu e pe prima linie acel spatiu inseamna ca e intre cuvinte deci trebuie 
+			   // ignorat
 			p++;
 			if(p < (int) sourceCode.length() - 1) {return getNextToken();}
 			else {
@@ -261,10 +313,10 @@ int getNextToken() {
 		const unsigned int cnt_keywords = 10;
 		unsigned int i;
 
-		std::string keywords[cnt_keywords] = {"citeste", "scrie", "daca", "atunci", "altfel", "altfel daca", "cat timp", "executa", "pentru", "pana cand"};
-		tokens keyword_tok[cnt_keywords] = {token_INPUT, token_OUTPUT, token_IF, token_THEN, token_ELSE, token_ELSE_IF, token_WHILE, token_EXECUTE, token_FOR, token_UNTIL};
+		std::string keywords[cnt_keywords] = {"citeste", "scrie", "daca", "atunci", "altfel", "executa", "pentru", "pana cand", "cat timp", "altfel daca"};
+		tokens keyword_tok[cnt_keywords] = {token_INPUT, token_OUTPUT, token_IF, token_THEN, token_ELSE, token_EXECUTE, token_FOR, token_UNTIL, token_WHILE, token_ELSE_IF};
 
-		for(i = 0; i < cnt_keywords; ++i)
+		for(i = 0; i < cnt_keywords; i++)
 		{
 			if(checkIfToken(sourceCode, p, keywords[i]))
 			{
@@ -273,7 +325,25 @@ int getNextToken() {
 				p += keywords[i].length();
 				return keyword_tok[i];
 			}
+			else if(i >= 7) {
+				int sum{};
+				if(checkIfTokenSpecial(sourceCode, p, keywords[i], sum)) {
+					currentToken = keywords[i];
+					p += sum;
+					return keyword_tok[i];
+				}
+			}
 		}
+	}
+
+
+	
+
+	// Comments
+	if(character == '#') {
+		currentToken = "#";
+		p++;
+		return token_COMMENT_LINE;	
 	}
 
 	// Operands
@@ -370,6 +440,9 @@ int getNextToken() {
 		const unsigned int cnt_keywords = 16;
 		unsigned int i;
 
+		// nu se mai folosesc toate aceste data types
+		// doar natural/e, intreg/i, real/e, string, text, bool, logica
+
 		std::string keywords[cnt_keywords] = {"(numar natural)", "(numere naturale)", "(numar natural, nenul)", "(numere naturale, nenule)", "(numar intreg)", "(numere intregi)", "(numar intreg, nenul)", "(numere intregi, nenule)", "(numar real)", "(numere reale)", "(numar real, nenul)", "(numere reale, nenule)", "(string)", "(text)", "(bool)", "(logica)"};
 		tokens keyword_tok[cnt_keywords / 2] = {token_ASSIGN_NATURAL, token_ASSIGN_nonzeroNATURAL, token_ASSIGN_INT, token_ASSIGN_nonzeroINT, token_ASSIGN_FLOAT, token_ASSIGN_nonzeroFLOAT, token_ASSIGN_STRING, token_ASSIGN_BOOL};
 
@@ -417,6 +490,10 @@ int getNextToken() {
 			currentToken = character;
 			p++;
 			return token_RIGHT_SQUARE;
+		case '|':
+			currentToken = character;
+			p++;
+			return token_VERTICAL_BAR;
 	}
 
 	// Identifier
@@ -426,7 +503,7 @@ int getNextToken() {
 			currentToken += character;
 			character = sourceCode[++p];
 		}
-		while(isalpha(character) or isdigit(character) or character == '_');
+		while((isalpha(character) or isdigit(character) or character == '_'));
 		return token_IDENTIFIER;
 	}
 

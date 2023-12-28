@@ -151,6 +151,7 @@ namespace interpretExpr {
 	void interpret(exprAst *Tree) {
 		if(Tree->op == numberType) {
 			checkFlags(Tree, Tree->number);
+
 			return;
 		}
 		else if(Tree->op == stringType) {
@@ -175,7 +176,6 @@ namespace interpretExpr {
 		}
  
 		double result{};
-
 
 		switch(Tree->op) {
 			case orType:
@@ -570,9 +570,19 @@ namespace interpretExpr {
 			aux(Tree);
 			checkFlags(Tree, Tree->number);
 		}
-
-
-
+	}
+	int interpretEntryReturnInt(exprAst *Tree) {
+		interpret(Tree);
+		if(isComparationTrue) {
+			aux(Tree);
+			checkFlags(Tree, Tree->number);
+		}
+		if(Tree->op == numberType) {
+			return Tree->number;
+		}
+		else {
+			throw syntaxError;
+		}
 	}
 }
 
@@ -583,6 +593,7 @@ namespace interpretOut {
 
 		for(int i{}; i < (int) Tree->list_of_exprTree.size(); i++) {
 			interpretExpr::interpretEntry(Tree->list_of_exprTree[i]);
+
 			
 			if(Tree->list_of_exprTree[i]->op == numberType) {std::cout << Tree->list_of_exprTree[i]->number; }
 			else {
@@ -592,8 +603,8 @@ namespace interpretOut {
 			}
 
 
-			delete Tree->list_of_exprTree[i];
-			Tree->list_of_exprTree[i] = nullptr;
+			//delete Tree->list_of_exprTree[i];
+			//Tree->list_of_exprTree[i] = nullptr;
 		}
 
 
@@ -638,18 +649,44 @@ namespace interpretIn {
 				variable.type = numberType;
 				variable.numberValue = xdou;
 			}
-			else {
-
+			else if(Tree->type == token_ASSIGN_STRING) {
 				std::getline(std::cin, xstr);
 				variable.type = stringType;
 				variable.stringValue = '"' + xstr + '"';
+			}
+			else if(Tree->type == token_ASSIGN_NATURAL) {
+				std::cin >> xdou;
+				
+				if(xdou < 0 or xdou != (int) xdou) throw badInput; 
+
+				variable.type = numberType;
+				variable.numberValue = xdou;
+			}
+			else if(Tree->type == token_ASSIGN_INT) {
+				std::cin >> xdou;
+
+				if(xdou != (int) xdou) throw badInput;
+
+				variable.type = numberType;
+				variable.numberValue = xdou;
+
+			}
+			else if(Tree->type == token_ASSIGN_BOOL) {
+				std::cin >> xstr;
+
+				if(xstr == "Adevarat" or xstr == "1") xdou = 1;
+				else if(xstr == "Fals" or xstr == "0") xdou = 0;
+				else throw badInput;
+
+				variable.type = numberType;
+				variable.numberValue = xdou;
 
 			}
 
 			variables[name] = variable;
 		}
 
-		if(Tree->type == token_ASSIGN_FLOAT) {
+		if(Tree->type != token_ASSIGN_STRING) {
 			std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // clean the buffer
 		}
 	}
