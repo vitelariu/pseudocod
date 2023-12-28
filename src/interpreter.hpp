@@ -635,7 +635,115 @@ namespace interpretVar {
 	}
 }
 
+
+
+std::string buffer{};
 namespace interpretIn {
+
+	void cutbuffer(int i) {
+		std::string newbuffer{};
+		while(i < (int) buffer.size()) {
+			newbuffer += buffer[i];
+			i++;
+		}
+		buffer = newbuffer;
+	}
+	
+	// returneaza urmatorul numar din buffer
+	double getNextNumberFromBuffer() {
+		int i{};
+		double number{};
+
+		// skip spaces;
+		while(buffer[i] == ' ' or buffer[i] == '\t') {
+			i++;
+		}
+
+
+		// verifica daca primul caracter nu e de fapt un chiar un char
+		// in loc de cifra
+		// daca e returneaza numarul corespunzator
+		char first = buffer[i];
+		if((65 <= (int) first and (int) first <= 90) or (97 <= (int) first and (int) first <= 122)) {
+			cutbuffer(i + 1);
+			return (double) first;
+		}
+		
+
+		bool real = false;
+		double p{1};
+
+		while(i < (int) buffer.size()) {
+			char x = buffer[i];
+
+			if(48 <= (int) x and (int) x <= 57) {
+				number = number * 10 + (x - '0');
+
+				if(real) {
+					p *= 10;
+				}
+			}
+			else if(x == '.' and !real) {
+				// doar unul singur pe numar
+				real = true;
+			}
+			else {
+				break;
+			}
+
+			i++;
+		}
+		cutbuffer(i);
+		number /= p;
+
+
+		return number;
+	}
+
+
+	std::string getNextBoolFromBuffer() {
+		int i{};
+		std::string Bool{};
+
+		while(buffer[i] == ' ' or buffer[i] == '\t') {
+			i++;
+		}
+
+
+		if(buffer[i] == '0' or buffer[i] == '1') {
+			Bool += buffer[i];
+			cutbuffer(1);
+			return Bool;
+		}
+
+		while(i < (int) buffer.size()) {
+			char x = buffer[i];
+
+
+			if((65 <= (int) x and (int) x <= 90) or (97 <= (int) x and (int) x <= 122)) {
+				Bool += x;
+			}
+			else if((int) x == ' ') {
+				break;
+			}
+
+			i++;
+		}
+		cutbuffer(i);
+		return Bool;
+	}
+
+	bool allSpaces(std::string n) {
+		bool isAll = true;
+		for(char x : n) {
+			if(x != ' ' and x != '\t') {
+				isAll = false;
+				break;
+			}
+		}
+		return isAll;
+	}
+
 	void interpretEntry(inAst *Tree) {
 		for(int i{}; i < (int) Tree->list_of_identifiers.size(); i++) {
 			std::string name = Tree->list_of_identifiers[i];
@@ -645,26 +753,55 @@ namespace interpretIn {
 			double xdou{};
 
 			if(Tree->type == token_ASSIGN_FLOAT) {
-				std::cin >> xdou;
+				// verifica buffer-ul daca contine ceva
+				// daca contine, citeste din buffer
+				if((int) buffer.size() == 0) {
+					while(true) {
+						std::getline(std::cin, buffer);
+						if(!allSpaces(buffer)) break;
+					}
+				}
+				xdou = getNextNumberFromBuffer();
 				variable.type = numberType;
 				variable.numberValue = xdou;
 			}
 			else if(Tree->type == token_ASSIGN_STRING) {
-				std::getline(std::cin, xstr);
+				if((int) buffer.size() != 0) {
+					xstr = buffer;
+					cutbuffer((int) buffer.size());
+				}
+				else {
+					std::getline(std::cin, xstr);
+				}
 				variable.type = stringType;
 				variable.stringValue = '"' + xstr + '"';
 			}
 			else if(Tree->type == token_ASSIGN_NATURAL) {
-				std::cin >> xdou;
-				
+				if((int) buffer.size() == 0) {
+					while(true) {
+						std::getline(std::cin, buffer);
+						if(!allSpaces(buffer)) break;
+					}
+				}
+
+				xdou = getNextNumberFromBuffer();
+
 				if(xdou < 0 or xdou != (int) xdou) throw badInput; 
 
 				variable.type = numberType;
 				variable.numberValue = xdou;
 			}
 			else if(Tree->type == token_ASSIGN_INT) {
-				std::cin >> xdou;
+				if((int) buffer.size() == 0) {
+					while(true) {
+						std::getline(std::cin, buffer);
+						if(!allSpaces(buffer)) break;
+					}
+				}
 
+				xdou = getNextNumberFromBuffer();
+
+	
 				if(xdou != (int) xdou) throw badInput;
 
 				variable.type = numberType;
@@ -672,7 +809,14 @@ namespace interpretIn {
 
 			}
 			else if(Tree->type == token_ASSIGN_BOOL) {
-				std::cin >> xstr;
+				if((int) buffer.size() == 0) {
+					while(true) {
+						std::getline(std::cin, buffer);
+						if(!allSpaces(buffer)) break;
+					}
+				}
+				xstr = getNextBoolFromBuffer();
+
 
 				if(xstr == "Adevarat" or xstr == "1") xdou = 1;
 				else if(xstr == "Fals" or xstr == "0") xdou = 0;
@@ -686,8 +830,6 @@ namespace interpretIn {
 			variables[name] = variable;
 		}
 
-		if(Tree->type != token_ASSIGN_STRING) {
-			std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // clean the buffer
-		}
+
 	}
 }
