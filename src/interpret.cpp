@@ -4,69 +4,6 @@
 #include "interpreter.hpp"
 
 
-#if 0
-void start(std::vector<std::pair<std::string, int>>& tokens, bool inTerminal) {
-	switch(tokens[0].second) {
-		case token_OUTPUT:
-		{
-			outAst *Tree = parseOut::parseEntry(tokens);
-			interpretOut::interpretEntry(Tree);
-			if(inTerminal) std::cout << '\n';
-			break;
-		}
-		case token_IDENTIFIER:
-		{
-			bool assign = false;
-			if(tokens.size() > 1 and tokens[1].second == token_ASSIGN) assign = true;
-
-			if(assign) {
-				varNode *node = parseVar::parseEntry(tokens);
-				interpretVar::interpretEntry(node);
-			}
-			else {
-				std::cou
-				exprAst *Tree = parseExpr::parseEntry(tokens);
-				interpretExpr::interpretEntry(Tree);
-	
-				if(inTerminal) {
-					if(Tree->op == numberType) std::cout << Tree->number;
-					else std::cout << Tree->str;
-					std::cout << '\n';
-				}
-
-				delete Tree;
-				Tree = nullptr;
-			}
-
-			break;
-		}
-		case token_INPUT:
-		{
-			inAst *Tree = parseIn::parseEntry(tokens);
-			interpretIn::interpretEntry(Tree);
-
-			break;
-		}
-		default:
-		{
-			exprAst *Tree = parseExpr::parseEntry(tokens);
-			interpretExpr::interpretEntry(Tree);
-
-			if(inTerminal) {
-				if(Tree->op == numberType) std::cout << Tree->number;
-				else std::cout << Tree->str;
-				std::cout << '\n';
-			}
-
-			delete Tree;
-			Tree = nullptr;
-
-		}
-	}
-}
-#endif
-
-
 // Aceasta functie este responsabila de a asambla arborele principal
 //
 // chestia asta se ocupa de nesting in tree
@@ -128,8 +65,6 @@ class ProgramBlocks {
 			if(identation_number < (int) Blocks.size() - 1) Blocks.erase(Blocks.begin() + identation_number + 1, Blocks.end());
 
 		}
-
-
 };
 
 statements *MainProgram = new statements;
@@ -143,7 +78,7 @@ void parse(std::vector<std::pair<std::string, int>>& tokens) {
 
 	// Daca tokens e gol, statement-ul va fi gol
 	if(tokens.size() == 0) {
-		mainblocks.add_line(Statement, 0);
+		mainblocks.add_line(Statement, mainblocks.Blocks.size() - 1);
 		return;
 	}
 
@@ -193,6 +128,13 @@ void parse(std::vector<std::pair<std::string, int>>& tokens) {
 			mainblocks.create_new_block(Statement->whileAst_p->block);
 			break;
 		}
+		case token_FOR:
+		{
+			Statement->forAst_p = parseFor::parseEntry(tokens);
+			mainblocks.add_line(Statement, identation_number);
+			mainblocks.create_new_block(Statement->forAst_p->block);
+			break;
+		}
 		default:
 		{
 			Statement->exprAst_p = parseExpr::parseEntry(tokens);
@@ -217,6 +159,8 @@ void execute(statements *Statements, bool inTerminal, int &line_number) {
 	for(statement* Statement : Statements->s) {
 		line_number++;
 
+
+
 		if(Statement->outAst_p) {
 			interpretOut::interpretEntry(Statement->outAst_p);
 
@@ -228,9 +172,7 @@ void execute(statements *Statements, bool inTerminal, int &line_number) {
 		}
 		else if(Statement->varNode_p) {
 
-
 			interpretVar::interpretEntry(Statement->varNode_p);
-
 
 		}
 		else if(Statement->exprAst_p) {
@@ -255,41 +197,103 @@ void execute(statements *Statements, bool inTerminal, int &line_number) {
 			// nu putem folosi new pe tot arborele pentru ca nu va merge
 			// deci va trebui sa creez o functie auxiliara pentru copiat arbori
 			// functia e declarata in parser
-			//
+			if(Statement->whileAst_p->block->s.size() == 0) throw syntaxError;
+			
 			exprAst *condition_copy = new exprAst(*Statement->whileAst_p->condition);
 			CopyTree::copy_exprAst(Statement->whileAst_p->condition, condition_copy);
 			
 
 			while(interpretExpr::interpretEntryReturnInt(condition_copy)) {
-				statements *new_block = new statements(*Statement->whileAst_p->block);
+				statements* new_block = new statements(*Statement->whileAst_p->block);
 				CopyTree::Entry(Statement->whileAst_p->block, new_block);
-				
 
-#if 0
-
-				exprAst *expression = new exprAst(*Statement->whileAst_p->block->s[0]->varNode_p->expr);
-				CopyTree::copy_exprAst(Statement->whileAst_p->block->s[0]->varNode_p->expr, expression);
-				varNode *asignare = new varNode(*Statement->whileAst_p->block->s[0]->varNode_p);
-				asignare->expr = expression;
-				statement *statement2 = new statement(*Statement->whileAst_p->block->s[0]);
-				statement2->varNode_p = asignare;
-				statements *list = new statements(*Statement->whileAst_p->block);
-				list->s[0] = statement2;
-#endif
-				
-
-				//std::cout << variables["i"].numberValue << "\n";	
 				execute(new_block, false, line_number);
-
-
 
 				condition_copy = new exprAst(*Statement->whileAst_p->condition);
 				CopyTree::copy_exprAst(Statement->whileAst_p->condition, condition_copy);
+			}			
+		}
+		else if(Statement->forAst_p) {
+			// NU, nu pot pune chestia asta intr-o functie separata cum am facut ca la
+			// scrie, citeste, whatever
+			// pentru ca trebuie sa apelez la functia execute() tot de aici
+			// nu pot sa o chem din interpret.h >:(
+
+			if(Statement->forAst_p->block->s.size() == 0) throw syntaxError;
+			varNode *it = new varNode(*Statement->forAst_p->assign);
+			interpretVar::interpretEntry(it);
+			if(variables[it->varName].type != numberType) throw syntaxError;
+
+			exprAst *up_copy = new exprAst(*Statement->forAst_p->UpperBoundary);
+			CopyTree::copy_exprAst(Statement->forAst_p->UpperBoundary, up_copy);
+
+			if(Statement->forAst_p->default_step) {
+				
+				for(double i = variables[Statement->forAst_p->iteratorName].numberValue; i <= interpretExpr::interpretEntryReturnDouble(up_copy); i++) {
+					statements *new_block = new statements(*Statement->forAst_p->block);
+					CopyTree::Entry(Statement->forAst_p->block, new_block);
+
+					execute(new_block, false, line_number);
+
+					up_copy = new exprAst(*Statement->forAst_p->UpperBoundary);
+					CopyTree::copy_exprAst(Statement->forAst_p->UpperBoundary, up_copy);
+
+					variables[Statement->forAst_p->iteratorName].numberValue++;
+
+				}
+			}
+			else {
+				
+
+				if(variables[Statement->forAst_p->iteratorName].numberValue < interpretExpr::interpretEntryReturnDouble(up_copy)) {
+					up_copy = new exprAst(*Statement->forAst_p->UpperBoundary);
+					CopyTree::copy_exprAst(Statement->forAst_p->UpperBoundary, up_copy);
+
+					while(variables[Statement->forAst_p->iteratorName].numberValue <= interpretExpr::interpretEntryReturnDouble(up_copy)) {
+						statements *new_block = new statements(*Statement->forAst_p->block);
+						CopyTree::Entry(Statement->forAst_p->block, new_block);
+
+						execute(new_block, false, line_number);
+
+						up_copy = new exprAst(*Statement->forAst_p->UpperBoundary);
+						CopyTree::copy_exprAst(Statement->forAst_p->UpperBoundary, up_copy);
+
+
+						varNode *step_copy = new varNode(*Statement->forAst_p->step);
+						step_copy->expr = new exprAst(*Statement->forAst_p->step->expr);
+						CopyTree::copy_exprAst(Statement->forAst_p->step->expr, step_copy->expr);
+						interpretVar::interpretEntry(step_copy);
+					}
+				}
+				else if(variables[Statement->forAst_p->iteratorName].numberValue > interpretExpr::interpretEntryReturnDouble(up_copy)) {
+					up_copy = new exprAst(*Statement->forAst_p->UpperBoundary);
+					CopyTree::copy_exprAst(Statement->forAst_p->UpperBoundary, up_copy);
+
+
+					while(variables[Statement->forAst_p->iteratorName].numberValue >= interpretExpr::interpretEntryReturnDouble(up_copy)) {
+						statements *new_block = new statements(*Statement->forAst_p->block);
+						CopyTree::Entry(Statement->forAst_p->block, new_block);
+
+						execute(new_block, false, line_number);
+
+						up_copy = new exprAst(*Statement->forAst_p->UpperBoundary);
+						CopyTree::copy_exprAst(Statement->forAst_p->UpperBoundary, up_copy);
+
+						
+
+						varNode *step_copy = new varNode(*Statement->forAst_p->step);
+						step_copy->expr = new exprAst(*Statement->forAst_p->step->expr);
+						CopyTree::copy_exprAst(Statement->forAst_p->step->expr, step_copy->expr);
+						interpretVar::interpretEntry(step_copy);
+					}
+				}
+				else {
+					execute(Statement->forAst_p->block, false, line_number);
+				}
+
 			}
 
 
-
-						
 		}
 	}	
 
@@ -433,8 +437,6 @@ int main(int argc, char **argv) {
 					if(tokens.size() == 1) {
 						if(tokens[0].second == token_IDENTATION) tokens.clear();
 					}
-
-					
 					parse(tokens);	
 				}
 
@@ -448,6 +450,9 @@ int main(int argc, char **argv) {
 				// interpretarea tree-ului
 				line_number = 0;
 				execute(MainProgram, false, line_number);
+
+
+
 					
 			}
 			else {

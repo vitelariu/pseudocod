@@ -563,7 +563,8 @@ namespace interpretExpr {
 
 		return;
 	}
-
+	
+	// god please forgive me for this atrocity
 	void interpretEntry(exprAst *Tree) {
 		interpret(Tree);
 		if(isComparationTrue) {
@@ -572,6 +573,19 @@ namespace interpretExpr {
 		}
 	}
 	int interpretEntryReturnInt(exprAst *Tree) {
+		interpret(Tree);
+		if(isComparationTrue) {
+			aux(Tree);
+			checkFlags(Tree, Tree->number);
+		}
+		if(Tree->op == numberType) {
+			return Tree->number;
+		}
+		else {
+			throw syntaxError;
+		}
+	}
+	double interpretEntryReturnDouble(exprAst *Tree) {
 		interpret(Tree);
 		if(isComparationTrue) {
 			aux(Tree);
@@ -744,6 +758,17 @@ namespace interpretIn {
 		return isAll;
 	}
 
+	void doubleAllBackSlashes(std::string &n) {
+		std::string new_n{};
+
+		for(char x : n) {
+			new_n += x;
+			if(x == '\\') new_n += '\\';
+		}
+
+		n = new_n;
+	}
+
 	void interpretEntry(inAst *Tree) {
 		for(int i{}; i < (int) Tree->list_of_identifiers.size(); i++) {
 			std::string name = Tree->list_of_identifiers[i];
@@ -774,6 +799,7 @@ namespace interpretIn {
 					std::getline(std::cin, xstr);
 				}
 				variable.type = stringType;
+				doubleAllBackSlashes(xstr);
 				variable.stringValue = '"' + xstr + '"';
 			}
 			else if(Tree->type == token_ASSIGN_NATURAL) {

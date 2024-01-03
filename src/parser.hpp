@@ -782,10 +782,6 @@ class varNode {
 	public:
 		std::string varName{};
 
-
-		// tokens vector prentru expr (this will be evaluated)	
-		// nu era necesar sincer chestia asta acum ca ma gandesc
-		// dar e deja facut asa si merge deci ¯\_(¬‿¬)_/¯
 		std::vector<std::pair<std::string, int>> expr_for_var;
 		// Pointer to exprAst for evaluating the value
 		exprAst *expr{};
@@ -969,7 +965,7 @@ class whileAst; // forward declaration
 				// (prin clasa statements)
 				//
 				// ex: statements: statement -> whileAst -> statements
-
+class forAst;
 
 class statement {
 	public:	
@@ -982,6 +978,7 @@ class statement {
 		varNode *varNode_p{};
 		inAst *inAst_p{};
 		whileAst *whileAst_p{};
+		forAst *forAst_p{};
 
 
 		~statement() {
@@ -1066,6 +1063,134 @@ class parseWhile {
 			return Parser.convert();
 		}
 };
+
+
+class forAst {
+	public:
+		std::string iteratorName{};
+		varNode *assign = new varNode;
+		exprAst *UpperBoundary = new exprAst;
+		varNode *step = new varNode;
+		bool default_step = true;
+
+		statements *block = new statements;
+
+		~forAst() {
+			delete assign;
+			delete UpperBoundary;
+			delete step;
+			delete block;
+		}
+};
+
+class parseFor {
+
+	int index{};
+	std::pair<std::string, int> token;
+	std::vector<std::pair<std::string, int>> tokens;
+	std::vector<std::pair<std::string, int>> tokensAssign;
+	std::vector<std::pair<std::string, int>> tokensUpperBoundary;
+	std::vector<std::pair<std::string, int>> step;
+
+
+	void match(int type) {
+		if(token.second != type) {
+			throw syntaxError;
+		}
+
+	}
+
+	void getNextTokenFromVector() {
+		if(index >= (int) tokens.size()) {
+			throw syntaxError;
+		}
+		token = tokens[index];
+		index++;
+	}
+
+
+	parseFor(std::vector<std::pair<std::string, int>>&& tokens) : tokens(std::move(tokens)) {}
+	parseFor(const std::vector<std::pair<std::string, int>>& tokens) : tokens(tokens) {}
+
+	forAst *convert() {
+		forAst *Tree = new forAst;
+
+		getNextTokenFromVector();
+		match(token_FOR);
+	
+		getNextTokenFromVector();
+
+
+		std::pair<std::string, int> iterator = token;
+		std::pair<std::string, int> assignSign = std::make_pair("<-", token_ASSIGN);
+		step.push_back(iterator);
+		step.push_back(assignSign);
+		Tree->iteratorName = iterator.first;
+
+		// asignarea
+		if(variables[token.first].type == unknownType) {
+			tokensAssign.push_back(iterator);
+			tokensAssign.push_back(assignSign);
+			tokensAssign.push_back(iterator);
+			getNextTokenFromVector();
+		}
+		else {
+			while(token.second != token_COMMA) {
+				tokensAssign.push_back(token);
+				getNextTokenFromVector();
+			}
+		}
+
+		Tree->assign = parseVar::parseEntry(tokensAssign);
+
+
+		// limita sus
+		getNextTokenFromVector();
+		while(token.second != token_COMMA and index < (int) tokens.size()) {
+			tokensUpperBoundary.push_back(token);
+			getNextTokenFromVector();
+
+
+		}
+
+		Tree->UpperBoundary = parseExpr::parseEntry(tokensUpperBoundary);
+
+
+
+
+
+		if(token.second == token_EXECUTE) {
+			step.push_back(iterator);
+			step.push_back(std::make_pair("+", token_PLUS));
+			step.push_back(std::make_pair("1", token_FLOAT));
+			Tree->step = parseVar::parseEntry(step);
+		}
+		else {
+			Tree->default_step = false;
+			getNextTokenFromVector();	
+			while(index < (int) tokens.size()) {
+				step.push_back(token);
+				getNextTokenFromVector();
+			}
+
+			Tree->step = parseVar::parseEntry(step);
+			
+			if(token.second != token_EXECUTE) {
+				throw forgotExecute;
+			}
+
+
+		}
+		return Tree;
+	}
+
+	public:
+		static forAst *parseEntry(const std::vector<std::pair<std::string, int>>& tokens) {
+			parseFor Parser(tokens);
+			return Parser.convert();
+		}
+};
+
 
 
 
