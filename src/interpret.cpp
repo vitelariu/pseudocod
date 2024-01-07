@@ -25,6 +25,7 @@
 class ProgramBlocks {
 	public:
 		std::vector<statements*> Blocks{};
+		std::vector<statement*> BlocksStatement{};
 
 
 		// spre exemplu daca avem un while
@@ -38,31 +39,90 @@ class ProgramBlocks {
 		// dupa urmatoarea regula:
 		// fie size = Blocks.size() - 1
 		// se verifica identarea de pe linia curenta
-		// daca e mai mare decat size: eroare
+		// daca e mai mare decat size - 1: eroare
 		//
 		// altfel
 		// se ia numarul de identari = i
 		// si vom adauga statement-ul curent la Blocks[i]
-		// daca size > i se da erase de la i + 1 pana la final
+		// daca Blocks.size() - 1 > i se da erase de la i + 1 pana la final
+		//
+		// BlocksStatement este un vector care contine statement-ul corespunzator pentru block-ul de cod din Blocks
+		// spre ex:
+		// sa zicem ca avem un statement numit Statement cu whileAst_p valid
+		// in cazul asta
+		// "Statement->whileAst_p->block" este blocul de cod
+		// iar statementul corespunzator acestui bloc de cod este "Statement"
+		//
+		// Va fi useful cand va trebui sa accesez statement-ul corespunzator blocului de cod de tip doAst_p spre ex
+		// pentru ca sintaxa este:
+		// executa
+		//     [...]
+		// cat timp [expr]
+		//
+		// cand dau de "executa" eu doar creez un statement cu doAst_p valid, iar apoi bun blocul de cod in "doAst_p->block"
+		// de aici, "doAst_p->condition" ramane invalid (nu, nu fac look ahead)
+		// iar cand ajuns la linia de cod unde este conditia (cat timp [expr]), am pierdut deja statement-ul
+		//	
+		// dar, daca am BlocksStatement pot accesa fiecare statement usor
+		// doar Blocks[0] nu are un statement real (pentru ca acela este main program)
 
-		void create_new_block(statements *block) {
+
+
+		// block-ul si statement-ul din care face parte 
+		void create_new_block(statements *block, statement *Statement) {
 			Blocks.push_back(block);
+			BlocksStatement.push_back(Statement);
 		}
 
 
 		void add_line(statement *Statement, int identation_number) {
-			if(identation_number > (int) Blocks.size() - 1) throw syntaxError;
-			
 			Blocks[identation_number]->add(Statement); // am adaugat in Blocks
+													   
+			for(int i = identation_number + 1; i < (int) Blocks.size(); i++) {
+				if(BlocksStatement[i]->doAst_p and !BlocksStatement[i]->doAst_p->isCondition) throw syntaxError;
+			}
 
+		}
+
+		// update in functie de identation_number
+		// practic in functie de identation_number va sterge (daca e nevoie) ultimele blocuri din vectorul Blocks
+		void update(int identation_number) {
+			if(identation_number > (int) Blocks.size() - 1) throw syntaxError;
 
 			// verificam daca fiecare statements din Blocks de la identation_number + 1 in sus
 			// are cel putin un statement inainte de a le sterge
 			for(int i = identation_number + 1; i < (int) Blocks.size(); i++) {
 				if(Blocks[i]->s.size() == 0) throw syntaxError;
+
+			}
+			for(int i = identation_number + 2; i < (int) Blocks.size(); i++) {
+				if(BlocksStatement[i]->doAst_p and !BlocksStatement[i]->doAst_p->isCondition) throw syntaxError;
 			}
 
-			if(identation_number < (int) Blocks.size() - 1) Blocks.erase(Blocks.begin() + identation_number + 1, Blocks.end());
+
+			if(identation_number < (int) Blocks.size() - 1) {
+				// ce sa stergem?
+				// in mod normal stergem de le identation_number + 1 pana la final
+				// problema e la do while loops
+				// ex:
+				// executa
+				//     scrie 1
+				// cat timp Adevarat
+				//
+				// acel cat timp Adevarat face parte din doAst chiar daca nu este identat ca restul codului
+				// deci prima data stergem de la identation_number + 2 pana la final
+				if(identation_number < (int) Blocks.size() - 2) {
+					Blocks.erase(Blocks.begin() + identation_number + 2, Blocks.end());
+					BlocksStatement.erase(BlocksStatement.begin() + identation_number + 2, BlocksStatement.end());
+				}
+				// iar acum verificam daca ultimul statement este un do while
+				// daca este, nu putem sterge direct acel identation_number + 1, pentru ca trebuie mai intai sa parsam
+				// aceasta linie, deci dam skip deocamdata
+				if(!BlocksStatement.back()->doAst_p) {
+					Blocks.erase(Blocks.begin() + identation_number + 1, Blocks.end());
+					BlocksStatement.erase(BlocksStatement.begin() + identation_number + 1, BlocksStatement.end());
+				}
+			}
 
 		}
 };
@@ -96,18 +156,21 @@ void parse(std::vector<std::pair<std::string, int>>& tokens) {
 	switch(tokens[0].second) {
 		case token_OUTPUT:
 		{
+			mainblocks.update(identation_number);
 			Statement->outAst_p = parseOut::parseEntry(tokens);
 			mainblocks.add_line(Statement, identation_number);
 			break;
 		}
 		case token_INPUT:
 		{
+			mainblocks.update(identation_number);
 			Statement->inAst_p = parseIn::parseEntry(tokens);
 			mainblocks.add_line(Statement, identation_number);
 			break;
 		}
 		case token_IDENTIFIER:
 		{
+			mainblocks.update(identation_number);
 			if(tokens.size() >= 3 and tokens[1].second == token_ASSIGN) {
 				// practic minimul necesar ca sa fie id <- expr
 				Statement->varNode_p = parseVar::parseEntry(tokens);
@@ -121,22 +184,43 @@ void parse(std::vector<std::pair<std::string, int>>& tokens) {
 
 			break;
 		}
+		case token_EXECUTE:
+		{
+			mainblocks.update(identation_number);
+			Statement->doAst_p = new doAst;
+			mainblocks.add_line(Statement, identation_number);
+			mainblocks.create_new_block(Statement->doAst_p->block, Statement);
+			break;
+		}
 		case token_WHILE:
 		{
-			Statement->whileAst_p = parseWhile::parseEntry(tokens);
-			mainblocks.add_line(Statement, identation_number);
-			mainblocks.create_new_block(Statement->whileAst_p->block);
+			// poate fi un while loop sau un while de la sfarsitul lui do while
+			// trebuie sa le parsam diferit
+
+
+			mainblocks.update(identation_number);
+			if(mainblocks.BlocksStatement.back()->doAst_p and identation_number == (int) mainblocks.Blocks.size() - 2) {
+				mainblocks.BlocksStatement.back()->doAst_p = parseDo::parseEntry(tokens,mainblocks.BlocksStatement.back()->doAst_p);
+				mainblocks.add_line(Statement, identation_number);
+			}
+			else {
+				Statement->whileAst_p = parseWhile::parseEntry(tokens);
+				mainblocks.add_line(Statement, identation_number);
+				mainblocks.create_new_block(Statement->whileAst_p->block, Statement);
+			}
 			break;
 		}
 		case token_FOR:
 		{
+			mainblocks.update(identation_number);
 			Statement->forAst_p = parseFor::parseEntry(tokens);
 			mainblocks.add_line(Statement, identation_number);
-			mainblocks.create_new_block(Statement->forAst_p->block);
+			mainblocks.create_new_block(Statement->forAst_p->block, Statement);
 			break;
 		}
 		default:
 		{
+			mainblocks.update(identation_number);
 			Statement->exprAst_p = parseExpr::parseEntry(tokens);
 			mainblocks.add_line(Statement, identation_number);
 
@@ -290,8 +374,24 @@ void execute(statements *Statements, bool inTerminal, int &line_number) {
 				else {
 					execute(Statement->forAst_p->block, false, line_number);
 				}
+			}
+		}
+		else if(Statement->doAst_p) {
+
+			if(Statement->doAst_p->block->s.size() == 0) throw syntaxError;
+			exprAst *condition_copy;
+
+			do {
+				condition_copy = new exprAst(*Statement->doAst_p->condition);
+				CopyTree::copy_exprAst(Statement->doAst_p->condition, condition_copy);
+
+				statements* new_block = new statements(*Statement->doAst_p->block);
+				CopyTree::Entry(Statement->doAst_p->block, new_block);
+
+				execute(new_block, false, line_number);
 
 			}
+			while(interpretExpr::interpretEntryReturnInt(condition_copy));
 
 
 		}
@@ -389,7 +489,9 @@ int main(int argc, char **argv) {
 		std::vector<std::string> all_lines{}; // used for errors
 			/* Citeste din fisier, pune in variabila sourceCode (declarara in lexer.h) si interpreteaza */
 		try {
-			mainblocks.create_new_block(MainProgram);
+			// main program nu are Statement, deci vom face unul "fals"
+			statement *FakeStatement = new statement;
+			mainblocks.create_new_block(MainProgram, FakeStatement);
 			
 			std::ifstream sourceFile(filename);
 			if(sourceFile) {

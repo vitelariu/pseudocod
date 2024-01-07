@@ -959,13 +959,17 @@ class parseIn {
 
 
 
-class whileAst; // forward declaration
-				// asta e folosit de statement dar in acelasi timp
-				// clasa asta poate sa foloseasca indirect clasa statement
-				// (prin clasa statements)
-				//
-				// ex: statements: statement -> whileAst -> statements
+
+// forward declaration
+// asta e folosit de statement dar in acelasi timp
+// clasa asta poate sa foloseasca indirect clasa statement
+// (prin clasa statements)
+//
+// ex: statements: statement -> whileAst -> statements
+
+class whileAst; 
 class forAst;
+class doAst;
 
 class statement {
 	public:	
@@ -979,7 +983,7 @@ class statement {
 		inAst *inAst_p{};
 		whileAst *whileAst_p{};
 		forAst *forAst_p{};
-
+		doAst *doAst_p{};
 
 		~statement() {
 			if(exprAst_p) delete exprAst_p;
@@ -1192,6 +1196,67 @@ class parseFor {
 };
 
 
+class doAst {
+	public:
+		exprAst *condition = new exprAst;
+		statements *block = new statements;
+
+		bool isCondition = false;
+
+		~doAst() {
+			delete condition;
+			delete block;
+		}
+};
+
+class parseDo {
+	int index{};
+	std::pair<std::string, int> token;
+	std::vector<std::pair<std::string, int>> tokens;
+	std::vector<std::pair<std::string, int>> tokensCondition;
+
+
+	void match(int type) {
+		if(token.second != type) {
+			throw syntaxError;
+		}
+
+	}
+
+	void getNextTokenFromVector() {
+		if(index >= (int) tokens.size()) {
+			throw syntaxError;
+		}
+		token = tokens[index];
+		index++;
+	}
+
+
+	parseDo(std::vector<std::pair<std::string, int>>&& tokens) : tokens(std::move(tokens)) {}
+	parseDo(const std::vector<std::pair<std::string, int>>& tokens) : tokens(tokens) {}
+	
+
+	doAst *convert(doAst *Tree) {
+		getNextTokenFromVector();
+		match(token_WHILE);
+
+		while(index < (int) tokens.size()) {
+			getNextTokenFromVector();
+			tokensCondition.push_back(token);
+		}
+
+		Tree->condition = parseExpr::parseEntry(tokensCondition);
+		Tree->isCondition = true;
+		return Tree;
+	}
+
+	public:
+		static doAst *parseEntry(const std::vector<std::pair<std::string, int>>& tokens, doAst *Tree) {
+			parseDo Parser(tokens);
+			return Parser.convert(Tree);
+		}
+
+};
 
 
 
