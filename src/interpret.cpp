@@ -287,10 +287,13 @@ void execute(statements *Statements, bool inTerminal, int &line_number) {
 			CopyTree::copy_exprAst(Statement->whileAst_p->condition, condition_copy);
 			
 
+			int line_number_copy = line_number;
 			while(interpretExpr::interpretEntryReturnInt(condition_copy)) {
 				statements* new_block = new statements(*Statement->whileAst_p->block);
 				CopyTree::Entry(Statement->whileAst_p->block, new_block);
 
+
+				line_number = line_number_copy;
 				execute(new_block, false, line_number);
 
 				condition_copy = new exprAst(*Statement->whileAst_p->condition);
@@ -311,9 +314,11 @@ void execute(statements *Statements, bool inTerminal, int &line_number) {
 			exprAst *up_copy = new exprAst(*Statement->forAst_p->UpperBoundary);
 			CopyTree::copy_exprAst(Statement->forAst_p->UpperBoundary, up_copy);
 
+			int line_number_copy = line_number;
 			if(Statement->forAst_p->default_step) {
 				
 				for(double i = variables[Statement->forAst_p->iteratorName].numberValue; i <= interpretExpr::interpretEntryReturnDouble(up_copy); i++) {
+					line_number = line_number_copy;
 					statements *new_block = new statements(*Statement->forAst_p->block);
 					CopyTree::Entry(Statement->forAst_p->block, new_block);
 
@@ -333,7 +338,9 @@ void execute(statements *Statements, bool inTerminal, int &line_number) {
 					up_copy = new exprAst(*Statement->forAst_p->UpperBoundary);
 					CopyTree::copy_exprAst(Statement->forAst_p->UpperBoundary, up_copy);
 
+
 					while(variables[Statement->forAst_p->iteratorName].numberValue <= interpretExpr::interpretEntryReturnDouble(up_copy)) {
+						line_number = line_number_copy;
 						statements *new_block = new statements(*Statement->forAst_p->block);
 						CopyTree::Entry(Statement->forAst_p->block, new_block);
 
@@ -355,6 +362,7 @@ void execute(statements *Statements, bool inTerminal, int &line_number) {
 
 
 					while(variables[Statement->forAst_p->iteratorName].numberValue >= interpretExpr::interpretEntryReturnDouble(up_copy)) {
+						line_number = line_number_copy;
 						statements *new_block = new statements(*Statement->forAst_p->block);
 						CopyTree::Entry(Statement->forAst_p->block, new_block);
 
@@ -380,8 +388,12 @@ void execute(statements *Statements, bool inTerminal, int &line_number) {
 
 			if(Statement->doAst_p->block->s.size() == 0) throw syntaxError;
 			exprAst *condition_copy;
+			
+			int line_number_copy = line_number;
+
 
 			do {
+				line_number = line_number_copy;
 				condition_copy = new exprAst(*Statement->doAst_p->condition);
 				CopyTree::copy_exprAst(Statement->doAst_p->condition, condition_copy);
 
