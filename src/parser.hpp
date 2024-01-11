@@ -25,7 +25,7 @@ std::unordered_map<std::string, var> variables{};
 enum types {
 	numberType,
 	stringType,
-	unknownType, // Type that has a special use (it means that cand be either numberType or stringType)
+	unknownType, // Type that has a special use (it means that can be either numberType or stringType)
 	varType,
 
 	orType,
@@ -1101,10 +1101,10 @@ class parseFor {
 
 	int index{};
 	std::pair<std::string, int> token;
-	std::vector<std::pair<std::string, int>> tokens;
-	std::vector<std::pair<std::string, int>> tokensAssign;
-	std::vector<std::pair<std::string, int>> tokensUpperBoundary;
-	std::vector<std::pair<std::string, int>> step;
+	std::vector<std::pair<std::string, int>> tokens{};
+	std::vector<std::pair<std::string, int>> tokensAssign{};
+	std::vector<std::pair<std::string, int>> tokensUpperBoundary{};
+	std::vector<std::pair<std::string, int>> step{};
 
 
 	void match(int type) {
@@ -1142,17 +1142,14 @@ class parseFor {
 		Tree->iteratorName = iterator.first;
 
 		// asignarea
-		if(variables[token.first].type == unknownType) {
-			tokensAssign.push_back(iterator);
-			tokensAssign.push_back(assignSign);
-			tokensAssign.push_back(iterator);
+		while(token.second != token_COMMA) {
+			tokensAssign.push_back(token);
+
 			getNextTokenFromVector();
 		}
-		else {
-			while(token.second != token_COMMA) {
-				tokensAssign.push_back(token);
-				getNextTokenFromVector();
-			}
+		if((int) tokensAssign.size() == 1 and variables[tokensAssign[0].first].type == unknownType) {
+			tokensAssign.push_back(assignSign);
+			tokensAssign.push_back(iterator);
 		}
 
 		Tree->assign = parseVar::parseEntry(tokensAssign);

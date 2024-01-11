@@ -86,9 +86,11 @@ class ProgramBlocks {
 
 		// update in functie de identation_number
 		// practic in functie de identation_number va sterge (daca e nevoie) ultimele blocuri din vectorul Blocks
-		void update(int identation_number) {
+		void update(int identation_number, bool second) {
+
 
 			if(identation_number > (int) Blocks.size() - 1) throw syntaxError;
+
 
 			// verificam daca fiecare statements din Blocks de la identation_number + 1 in sus
 			// are cel putin un statement inainte de a le sterge
@@ -96,6 +98,7 @@ class ProgramBlocks {
 				if(Blocks[i]->s.size() == 0) throw syntaxError;
 
 			}
+
 			for(int i = identation_number + 2; i < (int) Blocks.size(); i++) {
 				if(BlocksStatement[i]->doAst_p and !BlocksStatement[i]->doAst_p->isCondition) throw syntaxError;
 			}
@@ -121,14 +124,10 @@ class ProgramBlocks {
 				// iar acum verificam daca ultimul statement este un do while (sau un else if / else dupa caz)
 				// daca este, nu putem sterge direct acel identation_number + 1, pentru ca trebuie mai intai sa parsam
 				// aceasta linie ca sa vedem acel cat timp, deci dam skip deocamdata
-				if(!BlocksStatement.back()->doAst_p and !BlocksStatement.back()->ifelseAst_p) {
+				if(!second) {
 					Blocks.erase(Blocks.begin() + identation_number + 1, Blocks.end());
 					BlocksStatement.erase(BlocksStatement.begin() + identation_number + 1, BlocksStatement.end());
 				}
-				else if(!BlocksStatement.back()->ifelseAst_p) {
-					Blocks.erase(Blocks.begin() + identation_number + 1, Blocks.end());
-					BlocksStatement.erase(BlocksStatement.begin() + identation_number + 1, BlocksStatement.end());
-				}	
 
 			}
 
@@ -163,21 +162,22 @@ void parse(std::vector<std::pair<std::string, int>>& tokens) {
 	switch(tokens[0].second) {
 		case token_OUTPUT:
 		{
-			mainblocks.update(identation_number);
+
+			mainblocks.update(identation_number, false);
 			Statement->outAst_p = parseOut::parseEntry(tokens);
 			mainblocks.add_line(Statement, identation_number);
 			break;
 		}
 		case token_INPUT:
 		{
-			mainblocks.update(identation_number);
+			mainblocks.update(identation_number, false);
 			Statement->inAst_p = parseIn::parseEntry(tokens);
 			mainblocks.add_line(Statement, identation_number);
 			break;
 		}
 		case token_IDENTIFIER:
 		{
-			mainblocks.update(identation_number);
+			mainblocks.update(identation_number, false);
 			if(tokens.size() >= 3 and tokens[1].second == token_ASSIGN) {
 				// practic minimul necesar ca sa fie id <- expr
 				Statement->varNode_p = parseVar::parseEntry(tokens);
@@ -194,7 +194,7 @@ void parse(std::vector<std::pair<std::string, int>>& tokens) {
 		case token_EXECUTE:
 		{
 			if((int) tokens.size() > 1) throw syntaxError; // este necesar pt ca nu am o functie separata care sa parsuiasca linia asta
-			mainblocks.update(identation_number);
+			mainblocks.update(identation_number, false);
 			Statement->doAst_p = new doAst;
 			mainblocks.add_line(Statement, identation_number);
 			mainblocks.create_new_block(Statement->doAst_p->block, Statement);
@@ -206,12 +206,14 @@ void parse(std::vector<std::pair<std::string, int>>& tokens) {
 			// trebuie sa le parsam diferit
 
 
-			mainblocks.update(identation_number);
+			mainblocks.update(identation_number, true);
 			if(mainblocks.BlocksStatement.back()->doAst_p and identation_number == (int) mainblocks.Blocks.size() - 2) {
+
 				mainblocks.BlocksStatement.back()->doAst_p = parseDo::parseEntry(tokens,mainblocks.BlocksStatement.back()->doAst_p);
 				mainblocks.add_line(Statement, identation_number);
 			}
 			else {
+				mainblocks.update(identation_number, false);
 				Statement->whileAst_p = parseWhile::parseEntry(tokens);
 				mainblocks.add_line(Statement, identation_number);
 				mainblocks.create_new_block(Statement->whileAst_p->block, Statement);
@@ -220,7 +222,7 @@ void parse(std::vector<std::pair<std::string, int>>& tokens) {
 		}
 		case token_FOR:
 		{
-			mainblocks.update(identation_number);
+			mainblocks.update(identation_number, false);
 			Statement->forAst_p = parseFor::parseEntry(tokens);
 			mainblocks.add_line(Statement, identation_number);
 			mainblocks.create_new_block(Statement->forAst_p->block, Statement);
@@ -228,7 +230,7 @@ void parse(std::vector<std::pair<std::string, int>>& tokens) {
 		}
 		case token_IF:
 		{
-			mainblocks.update(identation_number);
+			mainblocks.update(identation_number, false);
 			Statement->ifelseAst_p = parseIfelse::parseEntryIf(tokens);
 			mainblocks.add_line(Statement, identation_number);
 			mainblocks.create_new_block(Statement->ifelseAst_p->blocks[0], Statement);
@@ -236,7 +238,7 @@ void parse(std::vector<std::pair<std::string, int>>& tokens) {
 		}
 		case token_ELSE_IF:
 		{
-			mainblocks.update(identation_number);
+			mainblocks.update(identation_number, true);
 			if(mainblocks.BlocksStatement.back()->ifelseAst_p and identation_number == (int) mainblocks.Blocks.size() - 2) {
 				mainblocks.BlocksStatement.back()->ifelseAst_p = parseIfelse::parseEntryElseIf(tokens, mainblocks.BlocksStatement.back()->ifelseAst_p);
 				mainblocks.add_line(Statement, identation_number);
@@ -253,7 +255,7 @@ void parse(std::vector<std::pair<std::string, int>>& tokens) {
 		case token_ELSE:
 		{
 			if((int) tokens.size() > 1) throw syntaxError; // este necesar pt ca nu am o functie separata care sa parsuiasca linia asta
-			mainblocks.update(identation_number);
+			mainblocks.update(identation_number, true);
 			if(mainblocks.BlocksStatement.back()->ifelseAst_p and identation_number == (int) mainblocks.Blocks.size() - 2) {
 
 				mainblocks.add_line(Statement, identation_number);
@@ -269,7 +271,7 @@ void parse(std::vector<std::pair<std::string, int>>& tokens) {
 		}
 		default:
 		{
-			mainblocks.update(identation_number);
+			mainblocks.update(identation_number, false);
 			Statement->exprAst_p = parseExpr::parseEntry(tokens);
 			mainblocks.add_line(Statement, identation_number);
 
@@ -357,6 +359,8 @@ void execute(statements *Statements, bool inTerminal, int &line_number) {
 
 			if(Statement->forAst_p->block->s.size() == 0) throw syntaxError;
 			varNode *it = new varNode(*Statement->forAst_p->assign);
+			it->expr = new exprAst(*Statement->forAst_p->assign->expr);
+			CopyTree::copy_exprAst(Statement->forAst_p->assign->expr, it->expr);
 			interpretVar::interpretEntry(it);
 			if(variables[it->varName].type != numberType) throw syntaxError;
 
