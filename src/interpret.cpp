@@ -87,6 +87,7 @@ class ProgramBlocks {
 		// update in functie de identation_number
 		// practic in functie de identation_number va sterge (daca e nevoie) ultimele blocuri din vectorul Blocks
 		void update(int identation_number) {
+
 			if(identation_number > (int) Blocks.size() - 1) throw syntaxError;
 
 			// verificam daca fiecare statements din Blocks de la identation_number + 1 in sus
@@ -115,13 +116,20 @@ class ProgramBlocks {
 					Blocks.erase(Blocks.begin() + identation_number + 2, Blocks.end());
 					BlocksStatement.erase(BlocksStatement.begin() + identation_number + 2, BlocksStatement.end());
 				}
-				// iar acum verificam daca ultimul statement este un do while
+
+
+				// iar acum verificam daca ultimul statement este un do while (sau un else if / else dupa caz)
 				// daca este, nu putem sterge direct acel identation_number + 1, pentru ca trebuie mai intai sa parsam
-				// aceasta linie, deci dam skip deocamdata
-				if(!BlocksStatement.back()->doAst_p) {
+				// aceasta linie ca sa vedem acel cat timp, deci dam skip deocamdata
+				if(!BlocksStatement.back()->doAst_p and !BlocksStatement.back()->ifelseAst_p) {
 					Blocks.erase(Blocks.begin() + identation_number + 1, Blocks.end());
 					BlocksStatement.erase(BlocksStatement.begin() + identation_number + 1, BlocksStatement.end());
 				}
+				else if(!BlocksStatement.back()->ifelseAst_p) {
+					Blocks.erase(Blocks.begin() + identation_number + 1, Blocks.end());
+					BlocksStatement.erase(BlocksStatement.begin() + identation_number + 1, BlocksStatement.end());
+				}	
+
 			}
 
 		}
@@ -152,7 +160,6 @@ void parse(std::vector<std::pair<std::string, int>>& tokens) {
 		identation_number = std::stoi(tokens[0].first);
 		tokens.erase(tokens.begin());
 	}
-
 	switch(tokens[0].second) {
 		case token_OUTPUT:
 		{
@@ -186,6 +193,7 @@ void parse(std::vector<std::pair<std::string, int>>& tokens) {
 		}
 		case token_EXECUTE:
 		{
+			if((int) tokens.size() > 1) throw syntaxError; // este necesar pt ca nu am o functie separata care sa parsuiasca linia asta
 			mainblocks.update(identation_number);
 			Statement->doAst_p = new doAst;
 			mainblocks.add_line(Statement, identation_number);
@@ -217,6 +225,47 @@ void parse(std::vector<std::pair<std::string, int>>& tokens) {
 			mainblocks.add_line(Statement, identation_number);
 			mainblocks.create_new_block(Statement->forAst_p->block, Statement);
 			break;
+		}
+		case token_IF:
+		{
+			mainblocks.update(identation_number);
+			Statement->ifelseAst_p = parseIfelse::parseEntryIf(tokens);
+			mainblocks.add_line(Statement, identation_number);
+			mainblocks.create_new_block(Statement->ifelseAst_p->blocks[0], Statement);
+			break;
+		}
+		case token_ELSE_IF:
+		{
+			mainblocks.update(identation_number);
+			if(mainblocks.BlocksStatement.back()->ifelseAst_p and identation_number == (int) mainblocks.Blocks.size() - 2) {
+				mainblocks.BlocksStatement.back()->ifelseAst_p = parseIfelse::parseEntryElseIf(tokens, mainblocks.BlocksStatement.back()->ifelseAst_p);
+				mainblocks.add_line(Statement, identation_number);
+				
+				mainblocks.Blocks.erase(mainblocks.Blocks.end());
+				mainblocks.Blocks.push_back(mainblocks.BlocksStatement.back()->ifelseAst_p->blocks.back());
+			}
+			else {
+				throw syntaxError;
+			}
+
+			break;
+		}
+		case token_ELSE:
+		{
+			if((int) tokens.size() > 1) throw syntaxError; // este necesar pt ca nu am o functie separata care sa parsuiasca linia asta
+			mainblocks.update(identation_number);
+			if(mainblocks.BlocksStatement.back()->ifelseAst_p and identation_number == (int) mainblocks.Blocks.size() - 2) {
+
+				mainblocks.add_line(Statement, identation_number);
+				
+				mainblocks.Blocks.erase(mainblocks.Blocks.end());
+				mainblocks.Blocks.push_back(mainblocks.BlocksStatement.back()->ifelseAst_p->blockElse);
+			}
+			else {
+				throw syntaxError;
+			}
+			break;
+
 		}
 		default:
 		{
@@ -316,18 +365,41 @@ void execute(statements *Statements, bool inTerminal, int &line_number) {
 
 			int line_number_copy = line_number;
 			if(Statement->forAst_p->default_step) {
-				
-				for(double i = variables[Statement->forAst_p->iteratorName].numberValue; i <= interpretExpr::interpretEntryReturnDouble(up_copy); i++) {
-					line_number = line_number_copy;
-					statements *new_block = new statements(*Statement->forAst_p->block);
-					CopyTree::Entry(Statement->forAst_p->block, new_block);
-
-					execute(new_block, false, line_number);
-
+				if(variables[Statement->forAst_p->iteratorName].numberValue <= interpretExpr::interpretEntryReturnDouble(up_copy)) {
 					up_copy = new exprAst(*Statement->forAst_p->UpperBoundary);
 					CopyTree::copy_exprAst(Statement->forAst_p->UpperBoundary, up_copy);
 
-					variables[Statement->forAst_p->iteratorName].numberValue++;
+
+					for(double i = variables[Statement->forAst_p->iteratorName].numberValue; i <= interpretExpr::interpretEntryReturnDouble(up_copy); i++) {
+						line_number = line_number_copy;
+						statements *new_block = new statements(*Statement->forAst_p->block);
+						CopyTree::Entry(Statement->forAst_p->block, new_block);
+
+						execute(new_block, false, line_number);
+
+						up_copy = new exprAst(*Statement->forAst_p->UpperBoundary);
+						CopyTree::copy_exprAst(Statement->forAst_p->UpperBoundary, up_copy);
+
+						variables[Statement->forAst_p->iteratorName].numberValue++;
+					}
+				}
+				else {
+					up_copy = new exprAst(*Statement->forAst_p->UpperBoundary);
+					CopyTree::copy_exprAst(Statement->forAst_p->UpperBoundary, up_copy);
+
+
+					for(double i = variables[Statement->forAst_p->iteratorName].numberValue; i >= interpretExpr::interpretEntryReturnDouble(up_copy); i--) {
+						line_number = line_number_copy;
+						statements *new_block = new statements(*Statement->forAst_p->block);
+						CopyTree::Entry(Statement->forAst_p->block, new_block);
+
+						execute(new_block, false, line_number);
+
+						up_copy = new exprAst(*Statement->forAst_p->UpperBoundary);
+						CopyTree::copy_exprAst(Statement->forAst_p->UpperBoundary, up_copy);
+
+						variables[Statement->forAst_p->iteratorName].numberValue--;
+					}
 
 				}
 			}
@@ -380,7 +452,9 @@ void execute(statements *Statements, bool inTerminal, int &line_number) {
 					}
 				}
 				else {
-					execute(Statement->forAst_p->block, false, line_number);
+					statements *new_block = new statements(*Statement->forAst_p->block);
+					CopyTree::Entry(Statement->forAst_p->block, new_block);
+					execute(new_block, false, line_number);
 				}
 			}
 		}
@@ -407,7 +481,38 @@ void execute(statements *Statements, bool inTerminal, int &line_number) {
 
 
 		}
-	}	
+		else if(Statement->ifelseAst_p) {
+			if(Statement->ifelseAst_p->blocks.size() == 0) throw syntaxError;
+
+			bool taken = false;	
+
+
+
+
+			for(int i{}; i < (int) Statement->ifelseAst_p->blocksExpr.size(); i++) {
+				exprAst *expression = new exprAst(*Statement->ifelseAst_p->blocksExpr[i]);
+				CopyTree::copy_exprAst(Statement->ifelseAst_p->blocksExpr[i], expression);
+				if(interpretExpr::interpretEntryReturnInt(expression)) {
+					taken = true;
+
+					statements *new_block = new statements(*Statement->ifelseAst_p->blocks[i]);
+					CopyTree::Entry(Statement->ifelseAst_p->blocks[i], new_block);
+
+					execute(new_block, false, line_number);
+					break;
+				}
+			}
+
+			if(!taken and Statement->ifelseAst_p->blockElse) {
+				statements *new_block = new statements(*Statement->ifelseAst_p->blockElse);
+				CopyTree::Entry(Statement->ifelseAst_p->blockElse, new_block);
+
+				execute(new_block, false, line_number);
+			}
+
+		}
+
+	}
 
 }
 
@@ -551,6 +656,7 @@ int main(int argc, char **argv) {
 					if(tokens.size() == 1) {
 						if(tokens[0].second == token_IDENTATION) tokens.clear();
 					}
+					
 					parse(tokens);	
 				}
 

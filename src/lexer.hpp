@@ -313,8 +313,8 @@ int getNextToken() {
 		const unsigned int cnt_keywords = 10;
 		unsigned int i;
 
-		std::string keywords[cnt_keywords] = {"citeste", "scrie", "daca", "atunci", "altfel", "executa", "pentru", "pana cand", "cat timp", "altfel daca"};
-		tokens keyword_tok[cnt_keywords] = {token_INPUT, token_OUTPUT, token_IF, token_THEN, token_ELSE, token_EXECUTE, token_FOR, token_UNTIL, token_WHILE, token_ELSE_IF};
+		std::string keywords[cnt_keywords] = {"citeste", "scrie", "daca", "atunci", "executa", "pentru", "pana cand", "cat timp", "altfel daca", "altfel"};
+		tokens keyword_tok[cnt_keywords] = {token_INPUT, token_OUTPUT, token_IF, token_THEN, token_EXECUTE, token_FOR, token_UNTIL, token_WHILE, token_ELSE_IF, token_ELSE};
 
 		for(i = 0; i < cnt_keywords; i++)
 		{
@@ -325,7 +325,7 @@ int getNextToken() {
 				p += keywords[i].length();
 				return keyword_tok[i];
 			}
-			else if(i >= 7) {
+			else if(i >= 6) {
 				int sum{};
 				if(checkIfTokenSpecial(sourceCode, p, keywords[i], sum)) {
 					currentToken = keywords[i];
@@ -347,8 +347,7 @@ int getNextToken() {
 	}
 
 	// Operands
-	if(character == '<') { // Asta pare foarte gresit;
-		// Codul "daca x<-y atunci" pare ca produce un token de atribuire dar dupa cum am discutat nu asa va functiona
+	if(character == '<') {
 		if(sourceCode[p+1] == '-') {
 			currentToken = "<-";
 			p += 2;
@@ -413,12 +412,12 @@ int getNextToken() {
 		p++;
 		return token_EQUAL;
 	}
-	if(checkIfToken(sourceCode, p, "!=")) {
-		currentToken = "!=";
-		p += currentToken.length();
-		return token_NOT_EQUAL;
-	}
 	if(character == '!') {
+		if(sourceCode[p+1] == '=') {
+			currentToken = "!=";
+			p += 2;
+			return token_NOT_EQUAL;
+		}
 		currentToken = character;
 		p++;
 		return token_NOT;
@@ -442,6 +441,7 @@ int getNextToken() {
 
 		// nu se mai folosesc toate aceste data types
 		// doar natural/e, intreg/i, real/e, string, text, bool, logica
+		// imi este prea lene sa sterg ce a ramas ca gunui, si apoi sa rescriu partea asta
 
 		std::string keywords[cnt_keywords] = {"(numar natural)", "(numere naturale)", "(numar natural, nenul)", "(numere naturale, nenule)", "(numar intreg)", "(numere intregi)", "(numar intreg, nenul)", "(numere intregi, nenule)", "(numar real)", "(numere reale)", "(numar real, nenul)", "(numere reale, nenule)", "(string)", "(text)", "(bool)", "(logica)"};
 		tokens keyword_tok[cnt_keywords / 2] = {token_ASSIGN_NATURAL, token_ASSIGN_nonzeroNATURAL, token_ASSIGN_INT, token_ASSIGN_nonzeroINT, token_ASSIGN_FLOAT, token_ASSIGN_nonzeroFLOAT, token_ASSIGN_STRING, token_ASSIGN_BOOL};

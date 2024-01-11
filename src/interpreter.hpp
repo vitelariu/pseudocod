@@ -109,6 +109,24 @@ namespace interpretExpr {
 		Tree->number = result;
 	}
 
+	// verifica daca toate flag-urile sunt false, pentru ca daca este vreo unu adevarat
+	// iar el e aplicat pe un string, atunci ar trebui sa dea eroare
+	void checkIfTrueFlagsString(exprAst *Tree) {
+		if(Tree->flags[exprAst::INT_FLAG]) {
+			throw syntaxError;
+		}
+		if(Tree->flags[exprAst::NEGATIVE_FLAG]) {
+			throw syntaxError;
+		}
+		if(Tree->flags[exprAst::NOT_GATE_FLAG]) {
+			throw syntaxError;
+		}
+		if(Tree->flags[exprAst::CMP_BUG_FIX_FLAG]) {
+			throw syntaxError;
+		}
+
+	}
+
 
 
 	std::string multiply_str(std::string x, double number) {
@@ -155,6 +173,7 @@ namespace interpretExpr {
 			return;
 		}
 		else if(Tree->op == stringType) {
+			checkIfTrueFlagsString(Tree);
 			return;
 		}
 		else if(Tree->op == varType) {
@@ -166,6 +185,7 @@ namespace interpretExpr {
 				Tree->op = numberType;
 			}
 			else {
+				checkIfTrueFlagsString(Tree);
 				std::string strFromVar = (variables[(Tree->var).name]).stringValue;
 				Tree->str = strFromVar;
 				Tree->op = stringType;
@@ -673,16 +693,26 @@ namespace interpretIn {
 			i++;
 		}
 
+		// Vericam daca primul caracter nu e + sau -
+		// daca e, incepem de la urmatorul iar la sfarsit inmultim numarul cu -1 daca e nevoie
+		bool is_negative = false;
+		if(buffer[i] == '+' or buffer[i] == '-') {
+			if(buffer[i] == '-') is_negative = true;
+			i++;
+		}
+
+
 
 		// verifica daca primul caracter nu e de fapt un chiar un char
 		// in loc de cifra
 		// daca e returneaza numarul corespunzator
 		char first = buffer[i];
-		if((65 <= (int) first and (int) first <= 90) or (97 <= (int) first and (int) first <= 122)) {
+		if((int) first < 48 or (int) first > 57) {
 			cutbuffer(i + 1);
-			return (double) first;
+			number = (double) first;
+			if(is_negative) number *= -1;
+			return number;
 		}
-		
 
 		bool real = false;
 		double p{1};
@@ -710,7 +740,7 @@ namespace interpretIn {
 		cutbuffer(i);
 		number /= p;
 
-
+		if(is_negative) number *= -1;
 		return number;
 	}
 

@@ -320,7 +320,7 @@ class parseExpr {
 				else {
 					throw syntaxError;
 				}
-				if(token.second != token_LEFT_PARENTH and token.second != token_FLOAT) {
+				if(token.second != token_LEFT_PARENTH and token.second != token_FLOAT and token.second != token_IDENTIFIER) {
 					throw syntaxError;
 				}
 				else {
@@ -521,6 +521,11 @@ class parseExpr {
 
 				if(token.second != token_GREATER and token.second != token_GREATER_EQUAL and token.second != token_SMALLER and token.second != token_SMALLER_EQUAL and token.second != token_EQUAL and token.second != token_NOT_EQUAL) break;
 
+				if((tokens[index - 2].second == token_STRING) ^ (tokens[index].second == token_STRING) and tokens[index - 2].second != token_IDENTIFIER and tokens[index].second != token_IDENTIFIER) {
+					throw syntaxError;
+				}
+
+
 				if(token.second == token_GREATER) {
 					getNextTokenFromVector();
 
@@ -576,7 +581,7 @@ class parseExpr {
 				else if(token.second == token_NOT_EQUAL) {
 					getNextTokenFromVector();
 
-					if(token.second == token_IDENTIFIER  or token.second == token_FLOAT or token.second == token_STRING or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) {
+					if(token.second == token_IDENTIFIER or token.second == token_FLOAT or token.second == token_STRING or token.second == token_LEFT_PARENTH or token.second == token_LEFT_SQUARE or token.second == token_MINUS or token.second == token_PLUS or token.second == token_NOT) {
 						exprTree = new exprAst(notEqualType, exprTree, addend());
 
 					}
@@ -588,7 +593,7 @@ class parseExpr {
 					throw syntaxError;
 				}
 			}
-
+			
 			return exprTree;
 
 
@@ -646,6 +651,7 @@ class parseExpr {
 			getNextTokenFromVector();
 			exprAst *result = logic();
 
+
 			exprTree = result;
 
 			while(true) {
@@ -697,6 +703,8 @@ class parseExpr {
 		/// Functia principala, converteste expresia la un AST
 		static exprAst *parseEntry(const std::vector<std::pair<std::string, int>>& tokens) {
 			parseExpr Parser(tokens);
+
+
 			return Parser.convert();
 		}
 };
@@ -970,6 +978,7 @@ class parseIn {
 class whileAst; 
 class forAst;
 class doAst;
+class ifelseAst;
 
 class statement {
 	public:	
@@ -984,6 +993,7 @@ class statement {
 		whileAst *whileAst_p{};
 		forAst *forAst_p{};
 		doAst *doAst_p{};
+		ifelseAst *ifelseAst_p{};
 
 		~statement() {
 			if(exprAst_p) delete exprAst_p;
@@ -1259,6 +1269,87 @@ class parseDo {
 };
 
 
+class ifelseAst {
+	public:
+		std::vector<exprAst*> blocksExpr{};
+		std::vector<statements*> blocks{};
+
+		statements *blockElse = new statements;
+		
+		~ifelseAst() {
+			for(exprAst *x : blocksExpr) {
+				delete x;
+			}
+			for(statements *x : blocks) {
+				delete x;
+			}
+			if(blockElse) delete blockElse;
+		}
+
+};
+
+
+class parseIfelse {
+	int index{};
+	std::pair<std::string, int> token;
+	std::vector<std::pair<std::string, int>> tokens;
+	std::vector<std::pair<std::string, int>> tokensCondition;
+
+
+
+	void match(int type) {
+		if(token.second != type) {
+			throw syntaxError;
+		}
+
+	}
+
+	void getNextTokenFromVector() {
+		if(index >= (int) tokens.size()) {
+			throw syntaxError;
+		}
+		token = tokens[index];
+		index++;
+	}
+
+
+	parseIfelse(std::vector<std::pair<std::string, int>>&& tokens) : tokens(std::move(tokens)) {}
+	parseIfelse(const std::vector<std::pair<std::string, int>>& tokens) : tokens(tokens) {}
+	
+
+	ifelseAst *convert(ifelseAst *Tree) {
+		getNextTokenFromVector();
+		getNextTokenFromVector();
+		
+		while(index < (int) tokens.size()) {
+			tokensCondition.push_back(token);
+			getNextTokenFromVector();
+		}
+		match(token_THEN);
+
+		exprAst *condition = parseExpr::parseEntry(tokensCondition);
+		Tree->blocksExpr.push_back(condition);
+
+		statements *newblock = new statements;
+		Tree->blocks.push_back(newblock);
+		
+		return Tree;
+	}
+
+
+
+	public:
+		static ifelseAst *parseEntryIf(const std::vector<std::pair<std::string, int>>& tokens) {
+			parseIfelse Parser(tokens);
+			ifelseAst *Tree = new ifelseAst;
+			return Parser.convert(Tree);
+		}
+		static ifelseAst *parseEntryElseIf(const std::vector<std::pair<std::string, int>>& tokens, ifelseAst *Tree) {
+			parseIfelse Parser(tokens);
+			return Parser.convert(Tree);
+		}
+};
+
 
 
 
@@ -1285,10 +1376,6 @@ namespace CopyTree {
 			NewTree->right = new exprAst(*OriginalTree->right);
 			copy_exprAst(OriginalTree->right, NewTree->right);
 		}
-	}
-
-	void copy_exprAst2(exprAst *OriginalTree, exprAst *NewTree) {
-		copy_exprAst(OriginalTree, NewTree);
 	}
 
 		
