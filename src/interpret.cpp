@@ -73,6 +73,23 @@ class ProgramBlocks {
 			Blocks.push_back(block);
 			BlocksStatement.push_back(Statement);
 		}
+		void delete_last_block() {
+			Blocks.erase(Blocks.end());
+			BlocksStatement.erase(BlocksStatement.end());
+		}
+		void delete_x_to_last_block(int start, bool all) {
+			int BlocksSize = (int) Blocks.size();
+			int BlocksStatementSize = (int) BlocksStatement.size();
+			for(int i = start; i < BlocksSize; i++) {
+				if(all) delete Blocks[i];
+				Blocks.erase(Blocks.begin() + i);
+			}
+			for(int i = start; i < BlocksStatementSize; i++) {
+				if(all) delete BlocksStatement[i];
+				BlocksStatement.erase(BlocksStatement.begin() + i);
+			}
+
+		}
 
 
 		void add_line(statement *Statement, int identation_number) {
@@ -138,8 +155,8 @@ statements *MainProgram = new statements;
 ProgramBlocks mainblocks{};
 
 
-
-void parse(std::vector<std::pair<std::string, int>>& tokens) {
+// ultimii 2 parametri se folosesc doar cand interpretez in terminal
+void parse(std::vector<std::pair<std::string, int>>& tokens, bool inTerminal, int &enter_exit) {
 		
 	statement *Statement = new statement;
 
@@ -211,6 +228,18 @@ void parse(std::vector<std::pair<std::string, int>>& tokens) {
 
 				mainblocks.BlocksStatement.back()->doAst_p = parseDo::parseEntry(tokens,mainblocks.BlocksStatement.back()->doAst_p);
 				mainblocks.add_line(Statement, identation_number);
+
+				if(inTerminal) {
+					// daca e in terminal sterge tot de la acest do while in sus
+					// fac asta ca atunci cand esti in terminal si scrii un do while
+					// dupa ce ai pus
+					// cat timp [expr]
+					//
+					// sa nu trebuiasca sa mai pui inca 2 randuri libere in continuare
+					// ca sa execute (cum e la celelalte ex: while loop)
+					mainblocks.delete_x_to_last_block(identation_number + 1, false);
+					enter_exit = 2;
+				}
 			}
 			else {
 				mainblocks.update(identation_number, false);
@@ -306,7 +335,6 @@ void execute(statements *Statements, bool inTerminal, int &line_number) {
 			interpretIn::interpretEntry(Statement->inAst_p);
 		}
 		else if(Statement->varNode_p) {
-
 			interpretVar::interpretEntry(Statement->varNode_p);
 
 		}
@@ -333,12 +361,12 @@ void execute(statements *Statements, bool inTerminal, int &line_number) {
 			// deci va trebui sa creez o functie auxiliara pentru copiat arbori
 			// functia e declarata in parser
 			if(Statement->whileAst_p->block->s.size() == 0) throw syntaxError;
-			
 			exprAst *condition_copy = new exprAst(*Statement->whileAst_p->condition);
 			CopyTree::copy_exprAst(Statement->whileAst_p->condition, condition_copy);
-			
 
 			int line_number_copy = line_number;
+			interpretExpr::interpretEntry(condition_copy);
+
 			while(interpretExpr::interpretEntryReturnInt(condition_copy)) {
 				statements* new_block = new statements(*Statement->whileAst_p->block);
 				CopyTree::Entry(Statement->whileAst_p->block, new_block);
@@ -349,7 +377,7 @@ void execute(statements *Statements, bool inTerminal, int &line_number) {
 
 				condition_copy = new exprAst(*Statement->whileAst_p->condition);
 				CopyTree::copy_exprAst(Statement->whileAst_p->condition, condition_copy);
-			}			
+			}
 		}
 		else if(Statement->forAst_p) {
 			// NU, nu pot pune chestia asta intr-o functie separata cum am facut ca la
@@ -532,52 +560,111 @@ int main(int argc, char **argv) {
 
 
 	if(argc == 0) {
-		std::cout << "PUS PE PAUZA!\n";
-		std::cout << "INTERPRETEAZA DOAR DINTR-O FILA DEOCAMDATA!\n";
-		std::cout << "VEI PUTEA INTERPRETA SI DE AICI IN URMATORUL UPDATE\n";
-		throw 69;
-
-
-
 		/* Interpreteaza direct in terminal */
+
+		int enter_exit{};
+		std::vector<std::string> all_lines{}; // used for errors
+		delete MainProgram;
+
+		statement *FakeStatement{};
+
+
 
 		std::cout << ">> ";
 		while(getline(std::cin, sourceCode)) {
-			if(sourceCode.length() == 0) {
-				std::cout << ">> ";
-				continue;
+			// main program nu are Statement, deci vom face unul "fals"
+			// executam la aproape fiecare linie deci 
+			if((int) mainblocks.Blocks.size() == 0) {
+				FakeStatement = new statement;
+				MainProgram = new statements;
+				mainblocks.create_new_block(MainProgram, FakeStatement);
 			}
+			
+			all_lines.push_back(sourceCode);
 			sourceCode2 = sourceCode;
-
+			sourceCode += "$";
 			std::vector<std::pair<std::string, int>> tokens{}; // every token and its type on this line
 
-			sourceCode += "$";
-			while(character != '$' and p < (int) sourceCode.length() - 1) {
-				int x = getNextToken();
+			if(sourceCode.size() != 0) {
+
+				while(character != '$' and p < (int) sourceCode.length() - 1) {
+					int x = getNextToken();
+					std::pair<std::string, int> token(currentToken, x);
 
 
-				std::pair<std::string, int> token(currentToken, x);
+					// Daca este "//" atunci dam skip la ce mai este din linia aceasta de cod
+					if(x == token_COMMENT_LINE) {
+						break;
+					}
 
 
-				// token_FORCE_QUIT este un token care este returnat atunci cand
-				//pe linie, ultimul caracter este ' ', '\t'
-				// Acesta trebuie ignorat
-				if(x != token_FORCE_QUIT) {
-					tokens.push_back(token);
+					// token_FORCE_QUIT este un token care este returnat atunci cand
+					// pe linie, ultimul caracter este ' ', '\t'
+					// Acesta trebuie ignorat
+					if(x != token_FORCE_QUIT) {
+						tokens.push_back(token);
+					}
 				}
 			}
+			line_number++;
 			p = 0;
 			character = ' '; // asta putea fi setat la orice in afara de $
+
+			// daca tokens e gol inseamna ca pe aceasta linie nu exista niciun caracter sau
+			// este comentat. De asemenea mai exista si linii de cod cu identare dar care nu contin
+			// nimic util. Acestea pot fi considerate tot linii goale
+			//
+			// Daca este gol sau linia e toata comentata, dam skip (se ocupa functia parse
+			// de a crea un statement gol in tree) - asta fiind necesar pentru erorile care pot
+			// aparea in runtime
+			//
+			// In schimb daca e doar identare, vom da clear in tokens
+			if(tokens.size() == 1) {
+				if(tokens[0].second == token_IDENTATION) tokens.clear();
+			}
+			if((int) mainblocks.Blocks.size() > 1 and (int) tokens.size() == 0) {
+				enter_exit++;
+				if(enter_exit == 2) {
+					mainblocks.delete_x_to_last_block(1, false);
+				}
+			}
+			else {
+				enter_exit = 0;
+			}
 			
 			try {
+				parse(tokens, true, enter_exit);
+
+				// acum executam chestia asta pe loc
+				// atat timp cat mainblocks.Blocks size nu este mai mare decat 1
+				if((int) mainblocks.Blocks.size() == 1) {
+					line_number = 0;
+					execute(MainProgram, true, line_number);
+					line_number = 0;
+
+					delete MainProgram;
+					delete FakeStatement;
+					mainblocks.delete_last_block();
+					all_lines.clear();
+
+					if(enter_exit == 2) {
+						std::cout << "\n";
+						enter_exit = 0;
+					}
+					std::cout << ">> ";
+				}
+				else {
+					std::cout << ".. ";
+				}
 			}
-			catch(errorsTypes n) {
+			catch(errorsTypes n) {	
+				std::string line = all_lines[line_number - 1];
 				switch(n) {
 					case syntaxError:
-						errors::syntax_error(filename, sourceCode2, line_number);
+						errors::syntax_error(filename, line, line_number);
 						break;
 					case divisionByZero:
-						errors::division_by_zero(filename, sourceCode2, line_number);
+						errors::division_by_zero(filename, line, line_number);
 						break;
 					case invalidFile:
 						errors::invalid_file(filename);
@@ -586,29 +673,36 @@ int main(int argc, char **argv) {
 						errors::too_many_args();
 						break;
 					case uninitialisedVar:
-						errors::uninitialised_var(filename, sourceCode2, line_number);
+						errors::uninitialised_var(filename, line, line_number);
 						break;
 					case badInput:
-						errors::bad_input(filename, sourceCode2, line_number);
+						errors::bad_input(filename, line, line_number);
 						break;
 					case forgotThen:
-						errors::forgot_then(filename, sourceCode2, line_number);
+						errors::forgot_then(filename, line, line_number);
 						break;
 					case forgotExecute:
-						errors::forgot_execute(filename, sourceCode2, line_number);
+						errors::forgot_execute(filename, line, line_number);
 						break;
+
+
 				}
+
+				line_number = 0;
+				mainblocks.delete_x_to_last_block(0, true);
+
+				//delete MainProgram;
+				//delete FakeStatement;
+				//mainblocks.delete_last_block();
+				all_lines.clear();
+
+				std::cout << "\n>> ";
 			}
-
-
-
-			std::cout << ">> ";
-
 		}
 	}
 	else if(argc == 1) {
-		std::vector<std::string> all_lines{}; // used for errors
 			/* Citeste din fisier, pune in variabila sourceCode (declarara in lexer.h) si interpreteaza */
+			std::vector<std::string> all_lines{}; // used for errors
 		try {
 			// main program nu are Statement, deci vom face unul "fals"
 			statement *FakeStatement = new statement;
@@ -661,7 +755,11 @@ int main(int argc, char **argv) {
 						if(tokens[0].second == token_IDENTATION) tokens.clear();
 					}
 					
-					parse(tokens);	
+					// al treilea parametru se foloseste doar in terminal
+					// si n-am chef sa fac function overloading, deci folosim
+					// o variabila trash
+					int trash{};
+					parse(tokens, false, trash);	
 				}
 
 

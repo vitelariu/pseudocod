@@ -7,7 +7,7 @@
 #include "errors.hpp"
 
 
-// Un struct pentru variabile si un ubnordered map unde se vor
+// Un struct pentru vari si un ubnordered map unde se vor
 // tine variabilele
 struct var {
 	int type{-1};
@@ -830,21 +830,46 @@ class parseVar {
 		var variable;
 
 		// Nu am cum sa stiu daca expr va fi stringType sau numberType pana nu o execut asa a folosesc unknwonType
-		variable.type = unknownType;
-		variables[node->varName] = variable;
+		if(variables[node->varName].type == -1) {
+			variable.type = unknownType;
+			variables[node->varName] = variable;
+
+			getNextTokenFromVector();
+			match(token_ASSIGN);
 
 
-		getNextTokenFromVector();
-		match(token_ASSIGN);
+			
 
+			for(int i{2}; i < (int) tokens.size(); i++) {
+				(node->expr_for_var).push_back(tokens[i]);
+			}
 
-		
+			// if ul asta nu lasa sa se initializeze o variabila cu ea insasi 
+			if(node->expr_for_var.size() > 0) {
+				for(std::pair<std::string, int> x : node->expr_for_var) {
+					if(x.first == node->varName) {
+						variable.type = -1;
+						variables[node->varName] = variable;
+						throw syntaxError;
+					}
+				}
+			}	
+			node->expr = parseExpr::parseEntry(node->expr_for_var);
 
-		for(int i{2}; i < (int) tokens.size(); i++) {
-			(node->expr_for_var).push_back(tokens[i]);
 		}
-		
-		node->expr = parseExpr::parseEntry(node->expr_for_var);
+		else {
+			getNextTokenFromVector();
+			match(token_ASSIGN);
+
+
+			
+
+			for(int i{2}; i < (int) tokens.size(); i++) {
+				(node->expr_for_var).push_back(tokens[i]);
+			}
+			
+			node->expr = parseExpr::parseEntry(node->expr_for_var);
+		}
 
 
 		return node;
@@ -1147,7 +1172,8 @@ class parseFor {
 
 			getNextTokenFromVector();
 		}
-		if((int) tokensAssign.size() == 1 and variables[tokensAssign[0].first].type == unknownType) {
+
+		if((int) tokensAssign.size() == 1 and (variables[tokensAssign[0].first].type == unknownType or variables[tokensAssign[0].first].type == numberType)) {
 			tokensAssign.push_back(assignSign);
 			tokensAssign.push_back(iterator);
 		}
