@@ -74,8 +74,8 @@ class ProgramBlocks {
 			BlocksStatement.push_back(Statement);
 		}
 		void delete_last_block() {
-			Blocks.erase(Blocks.end());
-			BlocksStatement.erase(BlocksStatement.end());
+			Blocks.pop_back();
+			BlocksStatement.pop_back();
 		}
 		void delete_x_to_last_block(int start, bool all) {
 			int BlocksSize = (int) Blocks.size();
@@ -272,7 +272,7 @@ void parse(std::vector<std::pair<std::string, int>>& tokens, bool inTerminal, in
 				mainblocks.BlocksStatement.back()->ifelseAst_p = parseIfelse::parseEntryElseIf(tokens, mainblocks.BlocksStatement.back()->ifelseAst_p);
 				mainblocks.add_line(Statement, identation_number);
 				
-				mainblocks.Blocks.erase(mainblocks.Blocks.end());
+				mainblocks.Blocks.pop_back();
 				mainblocks.Blocks.push_back(mainblocks.BlocksStatement.back()->ifelseAst_p->blocks.back());
 			}
 			else {
@@ -289,7 +289,7 @@ void parse(std::vector<std::pair<std::string, int>>& tokens, bool inTerminal, in
 
 				mainblocks.add_line(Statement, identation_number);
 				
-				mainblocks.Blocks.erase(mainblocks.Blocks.end());
+				mainblocks.Blocks.pop_back();
 				mainblocks.Blocks.push_back(mainblocks.BlocksStatement.back()->ifelseAst_p->blockElse);
 			}
 			else {
