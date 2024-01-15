@@ -701,7 +701,32 @@ class parseExpr {
 	public:
 
 		/// Functia principala, converteste expresia la un AST
-		static exprAst *parseEntry(const std::vector<std::pair<std::string, int>>& tokens) {
+		static exprAst *parseEntry(std::vector<std::pair<std::string, int>>& tokens) {
+			// Prima si prima data trebuie sa verificam daca tokens are "<-"
+			// pentru ca suntem in exprAst, vom trata asta ca pe "mai mic negativ" in loc
+			// de asignare.
+			// Practic cand dam de "<-" (token_ASSIGN) il vom imparti in 2: "<" (token_SMALLER)
+			// si "-" (token_MINUS)
+			
+			for(int i{}; i < (int) tokens.size(); i++) {
+				std::pair<std::string, int> x = tokens[i];
+				if(x.second == token_ASSIGN) {
+					std::pair<std::string, int> last = tokens.back();
+					tokens.push_back(last);
+					
+
+					tokens[i] = std::make_pair("<", token_SMALLER);
+					std::pair<std::string, int> current = tokens[i+1];
+					tokens[i+1] = std::make_pair("-", token_MINUS);
+					
+					for(int j = i + 2; j < (int) tokens.size(); j++) {
+						std::pair<std::string, int> copy = tokens[j];
+						tokens[j] = current;
+						current = copy;
+					}
+				}
+			}
+
 			parseExpr Parser(tokens);
 
 
