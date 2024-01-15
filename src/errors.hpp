@@ -10,6 +10,8 @@ enum errorsTypes {
 	badInput,
 	forgotThen,
 	forgotExecute,
+	onlyOneElseError,
+	elseWithoutIf,
 };
 
 
@@ -61,6 +63,17 @@ namespace errors {
 		medium(filename);
 		std::cout << "Token-ul \"executa\" lipseste!\n";
 		printLine(line, line_number);
+	}
+	void only_one_else_error(std::string filename, std::string line, int line_number) {
+		medium(filename);
+		std::cout << "Eroare: nu poti avea decat un singur \"altfel\" per \"daca\"\n";
+		printLine(line, line_number);
+	}
+	void else_without_if(std::string filename, std::string line, int line_number) {
+		medium(filename);
+		std::cout << "Eroare: niciun \"daca\" detectat inainte de \"altfel\"\n";
+		printLine(line, line_number);
+
 	}
 
 }

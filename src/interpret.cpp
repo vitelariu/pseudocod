@@ -81,14 +81,15 @@ class ProgramBlocks {
 			int BlocksSize = (int) Blocks.size();
 			int BlocksStatementSize = (int) BlocksStatement.size();
 			for(int i = start; i < BlocksSize; i++) {
-				if(all) delete Blocks[i];
-				Blocks.erase(Blocks.begin() + i);
+				if(all and Blocks[i]) {
+					delete Blocks[i];
+				}
 			}
+			if(start < BlocksSize) Blocks.erase(Blocks.begin(), Blocks.begin() + BlocksSize);
 			for(int i = start; i < BlocksStatementSize; i++) {
-				if(all) delete BlocksStatement[i];
-				BlocksStatement.erase(BlocksStatement.begin() + i);
+				if(all and BlocksStatement[i]) delete BlocksStatement[i];
 			}
-
+			if(start < BlocksStatementSize) BlocksStatement.erase(BlocksStatement.begin(), BlocksStatement.begin() + BlocksStatementSize);
 		}
 
 
@@ -103,17 +104,18 @@ class ProgramBlocks {
 
 		// update in functie de identation_number
 		// practic in functie de identation_number va sterge (daca e nevoie) ultimele blocuri din vectorul Blocks
-		void update(int identation_number, bool second) {
-
+		void update(int identation_number, bool second, int &line_number, bool isRealLine) {
 
 			if(identation_number > (int) Blocks.size() - 1) throw syntaxError;
-
 
 			// verificam daca fiecare statements din Blocks de la identation_number + 1 in sus
 			// are cel putin un statement inainte de a le sterge
 			for(int i = identation_number + 1; i < (int) Blocks.size(); i++) {
-				if(Blocks[i]->s.size() == 0) throw syntaxError;
-
+				if(Blocks[i]->s.size() == 0 or isNone(Blocks[i]->s)) {
+					line_number -= Blocks[i]->s.size();
+					if(isRealLine) line_number--;
+					throw syntaxError;
+				}
 			}
 
 			for(int i = identation_number + 2; i < (int) Blocks.size(); i++) {
@@ -156,12 +158,13 @@ ProgramBlocks mainblocks{};
 
 
 // ultimii 2 parametri se folosesc doar cand interpretez in terminal
-void parse(std::vector<std::pair<std::string, int>>& tokens, bool inTerminal, int &enter_exit) {
+void parse(std::vector<std::pair<std::string, int>>& tokens, bool inTerminal, int &enter_exit, int &line_number) {
 		
 	statement *Statement = new statement;
 
 	// Daca tokens e gol, statement-ul va fi gol
 	if(tokens.size() == 0) {
+		Statement->isNone = true;
 		mainblocks.add_line(Statement, mainblocks.Blocks.size() - 1);
 		return;
 	}
@@ -180,21 +183,21 @@ void parse(std::vector<std::pair<std::string, int>>& tokens, bool inTerminal, in
 		case token_OUTPUT:
 		{
 
-			mainblocks.update(identation_number, false);
+			mainblocks.update(identation_number, false, line_number, true);
 			Statement->outAst_p = parseOut::parseEntry(tokens);
 			mainblocks.add_line(Statement, identation_number);
 			break;
 		}
 		case token_INPUT:
 		{
-			mainblocks.update(identation_number, false);
+			mainblocks.update(identation_number, false, line_number, true);
 			Statement->inAst_p = parseIn::parseEntry(tokens);
 			mainblocks.add_line(Statement, identation_number);
 			break;
 		}
 		case token_IDENTIFIER:
 		{
-			mainblocks.update(identation_number, false);
+			mainblocks.update(identation_number, false, line_number, true);
 			if(tokens.size() >= 3 and tokens[1].second == token_ASSIGN) {
 				// practic minimul necesar ca sa fie id <- expr
 				Statement->varNode_p = parseVar::parseEntry(tokens);
@@ -211,7 +214,7 @@ void parse(std::vector<std::pair<std::string, int>>& tokens, bool inTerminal, in
 		case token_EXECUTE:
 		{
 			if((int) tokens.size() > 1) throw syntaxError; // este necesar pt ca nu am o functie separata care sa parsuiasca linia asta
-			mainblocks.update(identation_number, false);
+			mainblocks.update(identation_number, false, line_number, true);
 			Statement->doAst_p = new doAst;
 			mainblocks.add_line(Statement, identation_number);
 			mainblocks.create_new_block(Statement->doAst_p->block, Statement);
@@ -223,11 +226,11 @@ void parse(std::vector<std::pair<std::string, int>>& tokens, bool inTerminal, in
 			// trebuie sa le parsam diferit
 
 
-			mainblocks.update(identation_number, true);
+			mainblocks.update(identation_number, true, line_number, true);
 			if(mainblocks.BlocksStatement.back()->doAst_p and identation_number == (int) mainblocks.Blocks.size() - 2) {
 
 				mainblocks.BlocksStatement.back()->doAst_p = parseDo::parseEntry(tokens,mainblocks.BlocksStatement.back()->doAst_p);
-				mainblocks.add_line(Statement, identation_number);
+				//mainblocks.add_line(Statement, identation_number);
 
 				if(inTerminal) {
 					// daca e in terminal sterge tot de la acest do while in sus
@@ -242,7 +245,7 @@ void parse(std::vector<std::pair<std::string, int>>& tokens, bool inTerminal, in
 				}
 			}
 			else {
-				mainblocks.update(identation_number, false);
+				mainblocks.update(identation_number, false, line_number, true);
 				Statement->whileAst_p = parseWhile::parseEntry(tokens);
 				mainblocks.add_line(Statement, identation_number);
 				mainblocks.create_new_block(Statement->whileAst_p->block, Statement);
@@ -251,7 +254,7 @@ void parse(std::vector<std::pair<std::string, int>>& tokens, bool inTerminal, in
 		}
 		case token_FOR:
 		{
-			mainblocks.update(identation_number, false);
+			mainblocks.update(identation_number, false, line_number, true);
 			Statement->forAst_p = parseFor::parseEntry(tokens);
 			mainblocks.add_line(Statement, identation_number);
 			mainblocks.create_new_block(Statement->forAst_p->block, Statement);
@@ -259,7 +262,7 @@ void parse(std::vector<std::pair<std::string, int>>& tokens, bool inTerminal, in
 		}
 		case token_IF:
 		{
-			mainblocks.update(identation_number, false);
+			mainblocks.update(identation_number, false, line_number, true);
 			Statement->ifelseAst_p = parseIfelse::parseEntryIf(tokens);
 			mainblocks.add_line(Statement, identation_number);
 			mainblocks.create_new_block(Statement->ifelseAst_p->blocks[0], Statement);
@@ -267,16 +270,17 @@ void parse(std::vector<std::pair<std::string, int>>& tokens, bool inTerminal, in
 		}
 		case token_ELSE_IF:
 		{
-			mainblocks.update(identation_number, true);
+
+			mainblocks.update(identation_number, true, line_number, true);
 			if(mainblocks.BlocksStatement.back()->ifelseAst_p and identation_number == (int) mainblocks.Blocks.size() - 2) {
 				mainblocks.BlocksStatement.back()->ifelseAst_p = parseIfelse::parseEntryElseIf(tokens, mainblocks.BlocksStatement.back()->ifelseAst_p);
-				mainblocks.add_line(Statement, identation_number);
+			//	mainblocks.add_line(Statement, identation_number + 1);
 				
 				mainblocks.Blocks.pop_back();
 				mainblocks.Blocks.push_back(mainblocks.BlocksStatement.back()->ifelseAst_p->blocks.back());
 			}
 			else {
-				throw syntaxError;
+				throw elseWithoutIf;
 			}
 
 			break;
@@ -284,23 +288,26 @@ void parse(std::vector<std::pair<std::string, int>>& tokens, bool inTerminal, in
 		case token_ELSE:
 		{
 			if((int) tokens.size() > 1) throw syntaxError; // este necesar pt ca nu am o functie separata care sa parsuiasca linia asta
-			mainblocks.update(identation_number, true);
+			//if(mainblocks.BlocksStatement.back()->ifelseAst_p->blockElse) throw onlyOneElseError;
+			mainblocks.update(identation_number, true, line_number, true);
 			if(mainblocks.BlocksStatement.back()->ifelseAst_p and identation_number == (int) mainblocks.Blocks.size() - 2) {
+				if(mainblocks.Blocks[identation_number]->s.back()->ifelseAst_p->blockElse) throw onlyOneElseError;
 
-				mainblocks.add_line(Statement, identation_number);
+			//	mainblocks.add_line(Statement, identation_number);
 				
 				mainblocks.Blocks.pop_back();
+				mainblocks.BlocksStatement.back()->ifelseAst_p->blockElse = new statements;
 				mainblocks.Blocks.push_back(mainblocks.BlocksStatement.back()->ifelseAst_p->blockElse);
 			}
 			else {
-				throw syntaxError;
+				throw elseWithoutIf;
 			}
 			break;
 
 		}
 		default:
 		{
-			mainblocks.update(identation_number, false);
+			mainblocks.update(identation_number, false, line_number, true);
 			Statement->exprAst_p = parseExpr::parseEntry(tokens);
 			mainblocks.add_line(Statement, identation_number);
 
@@ -365,8 +372,11 @@ void execute(statements *Statements, bool inTerminal, int &line_number) {
 			CopyTree::copy_exprAst(Statement->whileAst_p->condition, condition_copy);
 
 			int line_number_copy = line_number;
-			interpretExpr::interpretEntry(condition_copy);
-
+			
+			if(!interpretExpr::interpretEntryReturnInt(condition_copy)) {
+				line_number += getAllLinesNumber(Statement->whileAst_p->block->s);
+			}
+				
 			while(interpretExpr::interpretEntryReturnInt(condition_copy)) {
 				statements* new_block = new statements(*Statement->whileAst_p->block);
 				CopyTree::Entry(Statement->whileAst_p->block, new_block);
@@ -507,6 +517,7 @@ void execute(statements *Statements, bool inTerminal, int &line_number) {
 				CopyTree::Entry(Statement->doAst_p->block, new_block);
 
 				execute(new_block, false, line_number);
+				line_number++;
 
 			}
 			while(interpretExpr::interpretEntryReturnInt(condition_copy));
@@ -516,32 +527,39 @@ void execute(statements *Statements, bool inTerminal, int &line_number) {
 		else if(Statement->ifelseAst_p) {
 			if(Statement->ifelseAst_p->blocks.size() == 0) throw syntaxError;
 
-			bool taken = false;	
-
-
-
+			bool taken = false;
 
 			for(int i{}; i < (int) Statement->ifelseAst_p->blocksExpr.size(); i++) {
 				exprAst *expression = new exprAst(*Statement->ifelseAst_p->blocksExpr[i]);
 				CopyTree::copy_exprAst(Statement->ifelseAst_p->blocksExpr[i], expression);
-				if(interpretExpr::interpretEntryReturnInt(expression)) {
+				if(interpretExpr::interpretEntryReturnInt(expression) and !taken) {
 					taken = true;
 
 					statements *new_block = new statements(*Statement->ifelseAst_p->blocks[i]);
 					CopyTree::Entry(Statement->ifelseAst_p->blocks[i], new_block);
 
 					execute(new_block, false, line_number);
-					break;
+					line_number++;
+
 				}
+				else {
+					line_number += getAllLinesNumber(Statement->ifelseAst_p->blocks[i]->s) + 1;
+				}
+				
 			}
 
 			if(!taken and Statement->ifelseAst_p->blockElse) {
 				statements *new_block = new statements(*Statement->ifelseAst_p->blockElse);
 				CopyTree::Entry(Statement->ifelseAst_p->blockElse, new_block);
-
 				execute(new_block, false, line_number);
 			}
+			else if(Statement->ifelseAst_p->blockElse) {
+				line_number += getAllLinesNumber(Statement->ifelseAst_p->blockElse->s) + 1;
+			}
+			line_number--;
 
+
+			
 		}
 
 	}
@@ -622,18 +640,19 @@ int main(int argc, char **argv) {
 			if(tokens.size() == 1) {
 				if(tokens[0].second == token_IDENTATION) tokens.clear();
 			}
-			if((int) mainblocks.Blocks.size() > 1 and (int) tokens.size() == 0) {
-				enter_exit++;
-				if(enter_exit == 2) {
-					mainblocks.delete_x_to_last_block(1, false);
-				}
-			}
-			else {
-				enter_exit = 0;
-			}
-			
 			try {
-				parse(tokens, true, enter_exit);
+				if((int) mainblocks.Blocks.size() > 1 and (int) tokens.size() == 0) {
+					enter_exit++;
+					if(enter_exit == 2) {
+						parse(tokens, true, enter_exit, line_number);
+						mainblocks.update(0, false, line_number, false);
+					}
+				}
+				else {
+					enter_exit = 0;
+				}
+			
+				parse(tokens, true, enter_exit, line_number);
 
 				// acum executam chestia asta pe loc
 				// atat timp cat mainblocks.Blocks size nu este mai mare decat 1
@@ -684,8 +703,12 @@ int main(int argc, char **argv) {
 					case forgotExecute:
 						errors::forgot_execute(filename, line, line_number);
 						break;
-
-
+					case onlyOneElseError:
+						errors::only_one_else_error(filename, line, line_number);
+						break;
+					case elseWithoutIf: 
+						errors::else_without_if(filename, line, line_number);
+						break;
 				}
 
 				line_number = 0;
@@ -759,7 +782,7 @@ int main(int argc, char **argv) {
 					// si n-am chef sa fac function overloading, deci folosim
 					// o variabila trash
 					int trash{};
-					parse(tokens, false, trash);	
+					parse(tokens, false, trash, line_number);	
 				}
 
 
@@ -770,6 +793,9 @@ int main(int argc, char **argv) {
 				// Daca am ajuns pana aici inseamna ca in parser n-a fost nicio eroare
 				// deci e safe sa facem line_number = 0 pentru a-l folosi in detectarea erorilor la
 				// interpretarea tree-ului
+				
+				
+				mainblocks.update(0, false, line_number, false);
 				line_number = 0;
 				execute(MainProgram, false, line_number);
 
@@ -809,8 +835,12 @@ int main(int argc, char **argv) {
 				case forgotExecute:
 					errors::forgot_execute(filename, line, line_number);
 					break;
-
-
+				case onlyOneElseError:
+					errors::only_one_else_error(filename, line, line_number);
+					break;
+				case elseWithoutIf: 
+					errors::else_without_if(filename, line, line_number);
+					break;
 			}
 		}
 	}

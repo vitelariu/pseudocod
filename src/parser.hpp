@@ -1020,6 +1020,9 @@ class statement {
 		doAst *doAst_p{};
 		ifelseAst *ifelseAst_p{};
 
+		bool isNone = false; // adica e gol
+							 // asta va fi true daca pe linie nu exista nimic
+
 		~statement() {
 			if(exprAst_p) delete exprAst_p;
 			if(outAst_p) delete outAst_p;
@@ -1297,7 +1300,7 @@ class ifelseAst {
 		std::vector<exprAst*> blocksExpr{};
 		std::vector<statements*> blocks{};
 
-		statements *blockElse = new statements;
+		statements *blockElse{};
 		
 		~ifelseAst() {
 			for(exprAst *x : blocksExpr) {
@@ -1441,4 +1444,43 @@ namespace CopyTree {
 			}
 		}
 	}
+}
+
+bool isNone(std::vector<statement*> s) {
+	for(statement *x : s) {
+		if(x->isNone == false) return false;	
+	}
+	return true;
+}
+
+// returneaza numarul de linii pentru un vector cu statement
+// (nu, nu va fi doar size-ul vectorului, pentru ca un statement
+// poate contine "statements" care l-a randul lui sa contine o serie
+// de statement)
+int getAllLinesNumber(std::vector<statement*> v) {
+	int rez{};
+	for(statement *x : v) {
+		if(x->whileAst_p) {
+			rez += getAllLinesNumber(x->whileAst_p->block->s) + 1;
+		}
+		else if(x->doAst_p) {
+			rez += getAllLinesNumber(x->doAst_p->block->s) + 2;
+		}
+		else if(x->forAst_p) {
+			rez += getAllLinesNumber(x->forAst_p->block->s) + 1;
+		}
+		else if(x->ifelseAst_p) {
+			for(statements *ifelseS : x->ifelseAst_p->blocks) {
+				rez += getAllLinesNumber(ifelseS->s) + 1;
+			}
+			if(x->ifelseAst_p->blockElse) {
+				rez += getAllLinesNumber(x->ifelseAst_p->blockElse->s) + 1;
+			}
+		}
+		else {
+			rez++;
+		}
+	}
+
+	return rez;
 }
