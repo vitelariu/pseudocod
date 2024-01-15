@@ -69,4 +69,4 @@ Se pot interpreta de asemenea și comenzi direct din terminal:
 
 ### Sintaxa
 
-Pentru o explicatie la sintaxa, aruncati o privire la fisierul [a relative link](Documentatie.pdf)
+Pentru o explicatie la sintaxa, aruncati o privire la fisierul [Documentatie](Documentatie.pdf)
