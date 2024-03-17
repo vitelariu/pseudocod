@@ -9,10 +9,24 @@
 
 // Un struct pentru vari si un ubnordered map unde se vor
 // tine variabilele
-struct var {
-	int type{-1};
-	double numberValue{};
-	std::string stringValue{};	
+class var {
+	public:
+		int type{-1};
+		int dimensions{};
+		// 0 dimensiuni = variabila normala
+		// spre ex: a <- 1
+		// n dimensiuni = array
+		// spre ex: a[100][100][100] <- 0
+		// (array cu 3 dimensiuni)
+		std::vector<int> dimensions_size{};
+
+		double numberValue{};
+		std::string stringValue{};	
+
+		// pentru arrays
+		double *arrayD;
+		char *arrayS;
+	
 };
 // std::string nume, var variabila
 std::unordered_map<std::string, var> variables{};
@@ -817,7 +831,14 @@ class varNode {
 
 		std::vector<std::pair<std::string, int>> expr_for_var;
 		// Pointer to exprAst for evaluating the value
-		exprAst *expr{};
+		exprAst *expr{}; // folosit si pentru arrays
+
+		// de aici in jos sunt variabile folosite in caz ca acest varNode
+		// stocheaza un array, si nu o variabila normala
+		
+		std::vector<exprAst*> coordinates{}; // size = dimensiuni
+		std::vector<exprAst*> values{};
+
 
 		~varNode() {
 			if(expr) delete expr;
@@ -854,7 +875,7 @@ class parseVar {
 		node->varName = token.first;
 		var variable;
 
-		// Nu am cum sa stiu daca expr va fi stringType sau numberType pana nu o execut asa a folosesc unknwonType
+		// Nu am cum sa stiu daca expr va fi stringType sau numberType pana nu o execut asa ca folosesc unknwonType
 		if(variables[node->varName].type == -1) {
 			variable.type = unknownType;
 			variables[node->varName] = variable;
@@ -908,6 +929,110 @@ class parseVar {
 		}
 };
 
+
+class parseArray {
+	int index{};
+	std::pair<std::string, int> token;
+	std::vector<std::pair<std::string, int>> tokens;
+
+	void match(int type) {
+		if(token.second != type) {
+			throw syntaxError;
+		}
+	}
+
+	void getNextTokenFromVector() {
+		if(index >= (int) tokens.size()) {
+			throw syntaxError;
+		}
+		token = tokens[index];
+		index++;
+	}
+
+	parseArray(std::vector<std::pair<std::string, int>>&& tokens) : tokens(std::move(tokens)) {}
+	parseArray(const std::vector<std::pair<std::string, int>>& tokens) : tokens(tokens) {}
+
+	varNode *convert() {
+		varNode *node = new varNode;
+		getNextTokenFromVector();
+		node->varName = token.first;
+
+		getNextTokenFromVector();
+		
+
+		// aici ar trebui sa urmeze dimensiunea
+		match(token_LEFT_SQUARE);
+		while(token.second == token_LEFT_SQUARE) {
+			std::vector<std::pair<std::string, int>> dimension{};
+			getNextTokenFromVector();
+			while(token.second != token_RIGHT_SQUARE) {
+				dimension.push_back(token);
+				getNextTokenFromVector();
+			}
+			node->coordinates.push_back(parseExpr::parseEntry(dimension));
+			getNextTokenFromVector();
+		}
+		
+		// urmatorul trebuie sa fie <-
+		match(token_ASSIGN);
+		getNextTokenFromVector();
+
+		
+		// Cele 3 tipuri de initializare
+		// ... <- 0
+		// ... <- {0}
+		// ... <- {1, 2, 3}
+		
+		if(token.second == token_LEFT_CURLY) {
+			// iar fiecare expr in parte
+			getNextTokenFromVector();
+			if(token.second == token_RIGHT_CURLY) {
+				if(index != (int) tokens.size()) throw syntaxError;
+			}
+			while(token.second != token_RIGHT_CURLY) {
+				std::vector<std::pair<std::string, int>> expression{};
+				while(token.second != token_COMMA and token.second != token_RIGHT_CURLY) {
+					expression.push_back(token);
+					getNextTokenFromVector();
+				}
+				node->values.push_back(parseExpr::parseEntry(expression));
+			
+				if(token.second == token_COMMA) getNextTokenFromVector();
+			}
+
+			if((int) node->values.size() == 0) throw syntaxError;
+
+		}
+		else {
+			// ia totul pana la sfarsit
+			std::vector<std::pair<std::string, int>> expression{};
+			for(int i = index - 1; i < (int) tokens.size(); i++) {
+				expression.push_back(tokens[i]);
+
+			}
+
+
+			node->expr = parseExpr::parseEntry(expression);
+		}
+
+		var variableArr;
+		if(variables[node->varName].type == -1) {
+			variableArr.type = unknownType;
+			variableArr.dimensions = (int) node->coordinates.size();
+			variables[node->varName] = variableArr;
+		}
+
+		return node;
+	}
+
+
+	public:
+		static varNode* parseEntry(const std::vector<std::pair<std::string, int>>& tokens) {
+			parseArray Parser(tokens);
+			return Parser.convert();
+		}
+
+};
 
 
 class inAst {
@@ -1508,4 +1633,23 @@ int getAllLinesNumber(std::vector<statement*> v) {
 	}
 
 	return rez;
+}
+
+bool isArrayAssign(std::vector<std::pair<std::string, int>>& tokens) {
+	int start = 1;
+	while(start < (int) tokens.size() and tokens[start].second != token_ASSIGN) {
+		if(tokens[start].second != token_LEFT_SQUARE) {
+			return false;
+		}
+		else {
+			start++;
+			while(tokens[start].second != token_RIGHT_SQUARE and start < (int) tokens.size()) {
+				start++;
+			}
+			if(tokens[start].second != token_RIGHT_SQUARE) return false;
+		}
+		
+		start++;
+	}
+	return true;
 }

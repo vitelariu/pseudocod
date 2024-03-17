@@ -2,6 +2,7 @@
 #include <cmath>
 #include <unordered_map>
 #include <limits>
+#include <cstring>
 #include "parser.hpp"
 
 
@@ -666,6 +667,152 @@ namespace interpretVar {
 
 		variables[node->varName] = variabile;
 	
+	}
+
+	void interpretEntryArray(varNode *node) {
+		unsigned long long sizeArray{1};
+		
+		for(int i{}; i < (int) node->coordinates.size(); i++) {
+			interpretExpr::interpretEntry(node->coordinates[i]);
+
+			if(node->coordinates[i]->op == numberType) {
+				variables[node->varName].dimensions_size.push_back(node->coordinates[i]->number);
+				sizeArray *= node->coordinates[i]->number;
+			}
+			else {
+				throw syntaxError;
+			}
+		}
+
+
+		if(variables[node->varName].type == numberType) {	
+			if(node->expr != nullptr) {
+				interpretExpr::interpretEntry(node->expr);
+				if(variables[node->varName].type != node->expr->op) throw syntaxError;
+				if((int) node->coordinates.size() != variables[node->varName].dimensions) throw syntaxError;
+				
+				unsigned long long product = 1;
+				unsigned long long rez{};
+				for(int i{}; i < (int) node->coordinates.size(); i++) {
+					product *= (node->coordinates[i]->number + 1);
+				}
+
+				for(int i{}; i < (int) node->coordinates.size(); i++) {
+					product /= (node->coordinates[i]->number + 1);
+					rez += (node->coordinates[i]->number + 1) * product; 
+				}
+				*(variables[node->varName].arrayD+rez-1) = node->expr->number;
+
+
+			}
+			else {
+				for(unsigned long long i{}; i < node->values.size(); i++) {
+					interpretExpr::interpretEntry(node->values[i]);
+					if(variables[node->varName].type != node->values[i]->op) throw syntaxError;
+				}
+
+
+				if(node->values[0]->op == numberType) {
+					if((int) node->coordinates.size() != variables[node->varName].dimensions) throw syntaxError;
+				
+					unsigned int product = 1;
+					int rez{};
+					for(int i{}; i < (int) node->coordinates.size(); i++) {
+						product *= (node->coordinates[i]->number + 1);
+					}
+
+					for(int i{}; i < (int) node->coordinates.size(); i++) {
+						product /= (node->coordinates[i]->number + 1);
+						rez += (node->coordinates[i]->number + 1) * product; 
+					}
+					for(unsigned long long i{}; i < node->values.size(); i++) {
+						*(variables[node->varName].arrayD+rez-1+i) = node->values[i]->number;
+					}
+				}
+			}
+		}
+		else if(variables[node->varName].type == stringType) {
+			if(node->expr != nullptr) {
+				interpretExpr::interpretEntry(node->expr);
+				if(variables[node->varName].type != node->expr->op) throw syntaxError;
+				if((int) node->coordinates.size() != variables[node->varName].dimensions + 1 and (int) node->coordinates.size() != variables[node->varName].dimensions) throw syntaxError;
+				
+				unsigned long long product = 1;
+				unsigned long long rez{};
+				for(int i{}; i < (int) node->coordinates.size(); i++) {
+					product *= (node->coordinates[i]->number + 1);
+				}
+
+				for(int i{}; i < (int) node->coordinates.size(); i++) {
+					product /= (node->coordinates[i]->number + 1);
+					rez += (node->coordinates[i]->number + 1) * product; 
+				}
+				*(variables[node->varName].arrayD+rez-1) = node->expr->number;
+
+
+			}
+
+		}
+		else {
+			if(node->expr != nullptr) {
+				interpretExpr::interpretEntry(node->expr);
+				variables[node->varName].type = node->expr->op;
+				if(node->expr->op == numberType) {
+					variables[node->varName].arrayD = (double*) malloc(sizeArray * sizeof(double));	
+					if(variables[node->varName].arrayD) {
+						for(unsigned long long j{}; j < sizeArray; j++) {
+							*(variables[node->varName].arrayD+j) = node->expr->number;
+						}
+					}
+					else {
+						throw syntaxError;
+					}
+				}
+				else {
+					variables[node->varName].arrayS = (char*) malloc(sizeArray * sizeof(char) * 2048);
+					if(variables[node->varName].arrayS) {
+						for(unsigned long long j{}; j < sizeArray; j++) {
+							strcpy(variables[node->varName].arrayS+(j*2048), node->expr->str.c_str());		
+						}
+					}
+					else {
+						throw syntaxError;
+					}				
+				}
+			}
+			else {
+				interpretExpr::interpretEntry(node->values[0]);
+				variables[node->varName].type = node->values[0]->op;
+
+				for(int j{1}; j < (int) node->values.size(); j++) {
+					interpretExpr::interpretEntry(node->values[j]);
+					if(node->values[j]->op != variables[node->varName].type) throw syntaxError;
+				}
+
+				if(node->values[0]->op == numberType) {
+					variables[node->varName].arrayD = (double*) malloc(sizeArray * sizeof(double));	
+					if(variables[node->varName].arrayD) {
+						for(unsigned long long j{}; j < node->values.size(); j++) {
+							*(variables[node->varName].arrayD+j) = node->values[j]->number;
+						}
+					}
+					else {
+						throw syntaxError;
+					}
+				}
+				else {
+					variables[node->varName].arrayS = (char*) malloc(sizeArray * sizeof(char) * 2048);
+					if(variables[node->varName].arrayS) {
+						for(unsigned long long j{}; j < node->values.size(); j++) {
+							strcpy(variables[node->varName].arrayS+(j*2048), node->values[j]->str.c_str());		
+						}
+					}
+					else {
+						throw syntaxError;
+					}
+				}
+			}
+		}
 	}
 }
 

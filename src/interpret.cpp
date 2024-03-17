@@ -198,11 +198,15 @@ void parse(std::vector<std::pair<std::string, int>>& tokens, bool inTerminal, in
 		case token_IDENTIFIER:
 		{
 			mainblocks.update(identation_number, false, line_number, true);
-			if(tokens.size() >= 3 and tokens[1].second == token_ASSIGN) {
+			if((tokens.size() >= 3 and tokens[1].second == token_ASSIGN)) {
 				// practic minimul necesar ca sa fie id <- expr
 				Statement->varNode_p = parseVar::parseEntry(tokens);
 				mainblocks.add_line(Statement, identation_number);
-			}	
+			}
+			else if(isArrayAssign(tokens)) {
+				Statement->varNode_p = parseArray::parseEntry(tokens);
+				mainblocks.add_line(Statement, identation_number);
+			}
 			else {
 				// altfel e expresie care doar incepe cu un identificator
 				Statement->exprAst_p = parseExpr::parseEntry(tokens);
@@ -342,8 +346,12 @@ void execute(statements *Statements, bool inTerminal, int &line_number) {
 			interpretIn::interpretEntry(Statement->inAst_p);
 		}
 		else if(Statement->varNode_p) {
-			interpretVar::interpretEntry(Statement->varNode_p);
-
+			if(variables[Statement->varNode_p->varName].dimensions == 0) {
+				interpretVar::interpretEntry(Statement->varNode_p);
+			}
+			else {
+				interpretVar::interpretEntryArray(Statement->varNode_p);
+			}
 		}
 		else if(Statement->exprAst_p) {
 			interpretExpr::interpretEntry(Statement->exprAst_p);

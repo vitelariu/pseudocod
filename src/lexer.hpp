@@ -60,6 +60,8 @@ enum tokens {
 	token_RIGHT_PARENTH,
 	token_LEFT_SQUARE,
 	token_RIGHT_SQUARE,
+	token_LEFT_CURLY,
+	token_RIGHT_CURLY,
 	token_VERTICAL_BAR,
 
 	// Others
@@ -490,6 +492,14 @@ int getNextToken() {
 			currentToken = character;
 			p++;
 			return token_RIGHT_SQUARE;
+		case '{':
+			currentToken = character;
+			p++;
+			return token_LEFT_CURLY;
+		case '}':
+			currentToken = character;
+			p++;
+			return token_RIGHT_CURLY;
 		case '|':
 			currentToken = character;
 			p++;
